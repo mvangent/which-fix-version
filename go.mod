@@ -3,6 +3,8 @@ module github.com/vpofe/just-in-time
 go 1.19
 
 require github.com/charmbracelet/bubbletea v0.22.0
+require	github.com/vpofe/go-http-client/gohttp v1.0.0
+require github.com/vpofe/go-http-client/pkg/gomime v1.0.0
 
 require (
 	github.com/containerd/console v1.0.3 // indirect

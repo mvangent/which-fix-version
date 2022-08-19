@@ -2,12 +2,43 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	gohttp "github.com/vpofe/go-http-client/gohttp"
+	gomime "github.com/vpofe/go-http-client/pkg/gomime"
 )
 
 type model struct {
+	status int
+	err    error
+}
+
+var (
+	httpClient = getHttpClient()
+)
+
+func getHttpClient() gohttp.Client {
+	headers := make(http.Header)
+	headers.Set(gomime.HeaderContentType, gomime.ContentTypeJson)
+
+	client := gohttp.NewBuilder().
+		SetHeaders(headers).
+		SetUserAgent("vpofe-machine").
+		SetConnectionTimeout(2 * time.Second).
+		SetResponseTimeout(3 * time.Second).
+		Build()
+
+	return client
+}
+
+func checkServer() tea.Msg {
+	client := getHttpClient()
+}
+
+/* type model struct {
 	choices  []string
 	cursor   int
 	selected map[int]struct{}
@@ -84,6 +115,7 @@ func (m model) View() string {
 	return s
 }
 
+*/
 func main() {
 	p := tea.NewProgram(initialModel())
 

@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	gohttp "github.com/vpofe/go-http-client/gohttp"
-    gomime "github.com/vpofe/go-http-client/gomime"
+	c "github.com/vpofe/just-in-time/httpclient"
 )
 
 type model struct {
@@ -16,117 +14,76 @@ type model struct {
 	err    error
 }
 
-var (
-	httpClient = getHttpClient()
-)
+var url = "https://charm.sh"
 
-func getHttpClient() gohttp.Client {
-	headers := make(http.Header)
-	headers.Set(gomime.HeaderContentType, gomime.ContentTypeJson)
-
-	client := gohttp.NewBuilder().
-		SetHeaders(headers).
-		SetUserAgent("vpofe-machine").
-		SetConnectionTimeout(2 * time.Second).
-		SetResponseTimeout(3 * time.Second).
-		Build()
-
-	return client
-}
-
-func checkServer() (tea.Msg, error){
-	response, err := httpClient.Get("https://charm.sh")
+func checkServer() tea.Msg {
+	response, err := c.HTTP.Get(url)
 
 	if err != nil {
-		return nil, err
+		return errMsg(err)
 	}
 
-    response.StatusCode
-
-    
-
+	return statusMsg(response.StatusCode)
 }
 
-/* type model struct {
-	choices  []string
-	cursor   int
-	selected map[int]struct{}
-}
+type statusMsg int
 
-func initialModel() model {
-	return model{
-		choices:  []string{"Make backend", "Read release branche version numbers", "Add prompt by JIRA issue", "Add spectacular ASCI message"},
-		selected: make(map[int]struct{}),
-	}
-}
+type errMsg error
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return checkServer
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
+	case statusMsg:
+		// The server returned a status message. Save it to our model. Also
+		// tell the Bubble Tea runtime we want to exit because we have nothing
+		// else to do. We'll still be able to render a final view with our
+		// status message.
+		m.status = int(msg)
+		return m, tea.Quit
+
+	case errMsg:
+		// There was an error. Note it in the model. And tell the runtime
+		// we're done and want to quit.
+		m.err = msg
+		return m, tea.Quit
+
 	case tea.KeyMsg:
-		switch msg.String() {
-
-		case "ctrl+c", "q":
+		// Ctrl+c exits. Even with short running programs it's good to have
+		// a quit key, just incase your logic is off. Users will be very
+		// annoyed if they can't exit.
+		if msg.Type == tea.KeyCtrlC {
 			return m, tea.Quit
-
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
-			}
-
-		case "enter", " ", "x":
-			_, ok := m.selected[m.cursor]
-			if ok {
-				delete(m.selected, m.cursor)
-			} else {
-				m.selected[m.cursor] = struct{}{}
-			}
 		}
 	}
 
+	// If we happen to get any other messages, don't do anything.
 	return m, nil
 }
 
 func (m model) View() string {
-	s := "What should vpofe still do for just in time - a has my release made it to production TUI - a simple check app to save time? \n\n"
-
-	// Iterate over our choices
-	for i, choice := range m.choices {
-
-		// Is the cursor pointing at this choice?
-		cursor := " " // no cursor
-		if m.cursor == i {
-			cursor = ">" // cursor!
-		}
-
-		// Is this choice selected?
-		checked := " " // not selected
-		if _, ok := m.selected[i]; ok {
-			checked = "x" // selected!
-		}
-
-		// Render the row
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
+	// If there's an error, print it out and don't do anything else.
+	if m.err != nil {
+		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
 
-	// The footer
-	s += "\nPress q to quit.\n"
+	// Tell the user we're doing something.
+	s := fmt.Sprintf("Checking %s ... ", url)
 
-	return s
+	// When the server responds with a status, add it to the current line.
+	if m.status > 0 {
+		s += fmt.Sprintf("%d %s!", m.status, http.StatusText(m.status))
+	}
+
+	// Send off whatever we came up with above for rendering.
+	return "\n" + s + "\n\n"
 }
 
-*/
 func main() {
-	p := tea.NewProgram(initialModel())
+	p := tea.NewProgram(model{})
 
 	if err := p.Start(); err != nil {
 		fmt.Printf("Something went wrong, ups. Error: %v", err)

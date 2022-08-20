@@ -8,7 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	gohttp "github.com/vpofe/go-http-client/gohttp"
-	gomime "github.com/vpofe/go-http-client/pkg/gomime"
+    gomime "github.com/vpofe/go-http-client/gomime"
 )
 
 type model struct {
@@ -34,8 +34,17 @@ func getHttpClient() gohttp.Client {
 	return client
 }
 
-func checkServer() tea.Msg {
-	client := getHttpClient()
+func checkServer() (tea.Msg, error){
+	response, err := httpClient.Get("https://charm.sh")
+
+	if err != nil {
+		return nil, err
+	}
+
+    response.StatusCode
+
+    
+
 }
 
 /* type model struct {

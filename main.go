@@ -2,31 +2,72 @@ package main
 
 import (
 	"fmt"
-	"net/http"
+	// "strings"
+	//"net/http"
 	"os"
+	"os/exec"
 
 	tea "github.com/charmbracelet/bubbletea"
-	c "github.com/vpofe/just-in-time/httpclient"
+	// c "github.com/vpofe/just-in-time/httpclient"
+	git "github.com/go-git/go-git/v5"
 )
 
 type model struct {
-	status int
+	status string
 	err    error
 }
 
 var url = "https://charm.sh"
 
 func checkServer() tea.Msg {
-	response, err := c.HTTP.Get(url)
+
+	/* response, err := c.HTTP.Get(url)
+
+	   // if err != nil {
+			return errMsg(err)
+		}
+	*/
+	// check for release versions
+	// Clones the given repository in memory, creating the remote, the local
+	// branches and fetching the objects, exactly as:
+	Info("git clone https://github.com/go-git/go-billy")
+
+	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+		URL: "https://github.com/go-git/go-billy",
+	})
+
+	CheckIfError(err)
+
+	// Gets the HEAD history from HEAD, just like this command:
+	Info("git log")
+
+	// ... retrieves the branch pointed by HEAD
+	ref, err := r.Head()
+	CheckIfError(err)
+
+	// ... retrieves the commit history
+	cIter, err := r.Log(&git.LogOptions{From: ref.Hash()})
+	CheckIfError(err)
+
+	// ... just iterates over the commits, printing it
+	err = cIter.ForEach(func(c *object.Commit) error {
+		fmt.Println(c)
+		return nil
+	})
+	CheckIfError(err)
 
 	if err != nil {
 		return errMsg(err)
 	}
 
-	return statusMsg(response.StatusCode)
+	// releases := strings.Split("--", string(stdout))
+
+	return statusMsg(string(stdout))
+
+	// return statusMsg(response.StatusCode)
 }
 
-type statusMsg int
+type statusMsg string
 
 type errMsg error
 
@@ -42,7 +83,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// tell the Bubble Tea runtime we want to exit because we have nothing
 		// else to do. We'll still be able to render a final view with our
 		// status message.
-		m.status = int(msg)
+		m.status = string(msg)
 		return m, tea.Quit
 
 	case errMsg:
@@ -74,8 +115,8 @@ func (m model) View() string {
 	s := fmt.Sprintf("Checking %s ... ", url)
 
 	// When the server responds with a status, add it to the current line.
-	if m.status > 0 {
-		s += fmt.Sprintf("%d %s!", m.status, http.StatusText(m.status))
+	if len(m.status) > 0 {
+		s += fmt.Sprintf("%d %s!", m.status)
 	}
 
 	// Send off whatever we came up with above for rendering.

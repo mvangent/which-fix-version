@@ -5,11 +5,12 @@ import (
 	// "strings"
 	//"net/http"
 	"os"
-	"os/exec"
 
 	tea "github.com/charmbracelet/bubbletea"
 	// c "github.com/vpofe/just-in-time/httpclient"
 	git "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/storage/memory"
 )
 
 type model struct {
@@ -18,6 +19,21 @@ type model struct {
 }
 
 var url = "https://charm.sh"
+
+// CheckIfError should be used to naively panics if an error is not nil.
+func CheckIfError(err error) {
+	if err == nil {
+		return
+	}
+
+	fmt.Printf("\x1b[31;1m%s\x1b[0m\n", fmt.Sprintf("error: %s", err))
+	os.Exit(1)
+}
+
+// Info should be used to describe the example commands that are about to run.
+func Info(format string, args ...interface{}) {
+	fmt.Printf("\x1b[34;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
+}
 
 func checkServer() tea.Msg {
 
@@ -33,7 +49,7 @@ func checkServer() tea.Msg {
 	Info("git clone https://github.com/go-git/go-billy")
 
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL: "https://github.com/go-git/go-billy",
+		URL: "https://github.com/vpofe/just-in-time",
 	})
 
 	CheckIfError(err)
@@ -62,7 +78,7 @@ func checkServer() tea.Msg {
 
 	// releases := strings.Split("--", string(stdout))
 
-	return statusMsg(string(stdout))
+	return statusMsg(string("great success"))
 
 	// return statusMsg(response.StatusCode)
 }

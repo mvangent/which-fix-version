@@ -18,7 +18,7 @@ type model struct {
 	err    error
 }
 
-var url = "https://charm.sh"
+var url = "https://github.com/vpofe/just-in-time"
 
 // CheckIfError should be used to naively panics if an error is not nil.
 func CheckIfError(err error) {
@@ -46,10 +46,12 @@ func checkServer() tea.Msg {
 	// check for release versions
 	// Clones the given repository in memory, creating the remote, the local
 	// branches and fetching the objects, exactly as:
-	Info("git clone https://github.com/go-git/go-billy")
+	Info(url)
 
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL: "https://github.com/vpofe/just-in-time",
+		URL: url,
+        // ReferenceName: "main",
+        // SingleBranch: true,
 	})
 
 	CheckIfError(err)

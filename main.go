@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -29,6 +30,8 @@ type model struct {
 	isPending  bool
 	isDone     bool
 	commitHash string
+	spinner    spinner.Model
+	fixVersion string
 }
 
 var url = "https://github.com/vpofe/just-in-time"
@@ -58,6 +61,11 @@ func initialModel() model {
 		m.inputs[i] = t
 	}
 
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	m.spinner = s
+
 	return m
 }
 
@@ -65,11 +73,17 @@ func (m model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-type statusMsg string
+type fixVersionMsg string
 type errMsg error
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case fixVersionMsg:
+		m.isPending = false
+		m.isDone = true
+		m.fixVersion = string(msg)
+
+		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
@@ -89,6 +103,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Set focus to next input
 		case "tab", "shift+tab", "enter", "up", "down":
+			if m.isDone {
+				return m, tea.Quit
+			}
+
 			s := msg.String()
 
 			// Did the user press enter while the submit button was focused?
@@ -96,7 +114,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if s == "enter" && m.focusIndex == len(m.inputs) {
 				m.commitHash = m.inputs[0].Value()
 				m.isPending = true
-				return m, findFixVersion // tea.Quit
+				return m, tea.Batch(m.findFixVersion, m.getRemoteBranches) // tea.Quit
 			}
 
 			// Cycle indexes
@@ -128,13 +146,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			return m, tea.Batch(cmds...)
+
 		}
+
+		// Handle character input and blinking
+		cmd := m.updateInputs(msg)
+
+		return m, cmd
+
+	default:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 	}
-
-	// Handle character input and blinking
-	cmd := m.updateInputs(msg)
-
-	return m, cmd
 }
 
 func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
@@ -150,8 +174,13 @@ func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 }
 
 func (m model) View() string {
+	if m.isDone {
+		return fmt.Sprintf("\n\n Fix version = %s", m.fixVersion)
+	}
+
 	if m.isPending {
-		return "Show fancy loader"
+		str := fmt.Sprintf("\n\n   %s Scanning release branches for %s...press q to quit\n\n", m.spinner.View(), m.commitHash)
+		return str
 	}
 
 	var b strings.Builder
@@ -182,95 +211,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-/*
-import (
-	"fmt"
-	// "strings"
-	//"net/http"
-	"os"
-
-	tea "github.com/charmbracelet/bubbletea"
-	// c "github.com/vpofe/just-in-time/httpclient"
-	git "github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/go-git/go-git/v5/storage/memory"
-)
-
-type model struct {
-	commitHash   string
-	err          error
-	foundRelease string
-    ticket       string
-}
-
-var url = "https://charm.sh"
-
-
-
-
-func (m model) Init() tea.Cmd {
-	return checkServer
-}
-
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-
-	case statusMsg:
-		// The server returned a status message. Save it to our model. Also
-		// tell the Bubble Tea runtime we want to exit because we have nothing
-		// else to do. We'll still be able to render a final view with our
-		// status message.
-		m.status = string(msg)
-		return m, tea.Quit
-
-	case errMsg:
-		// There was an error. Note it in the model. And tell the runtime
-		// we're done and want to quit.
-		m.err = msg
-		return m, tea.Quit
-
-     	case tea.KeyMsg:
-		// Ctrl+c exits. Even with short running programs it's good to have
-		// a quit key, just incase your logic is off. Users will be very
-		// annoyed if they can't exit.
-		if msg.Type == tea.KeyCtrlC {
-			return m, tea.Quit
-		}
-	}
-
-	// If we happen to get any other messages, don't do anything.
-	return m, nil
-}
-
-func (m model) View() string {
-	// If there's an error, print it out and don't do anything else.
-	if m.err != nil {
-		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
-	}
-
-	// Tell the user we're doing something.
-	s := fmt.Sprintf("Checking %s ... ", url)
-
-	// When the server responds with a status, add it to the current line.
-	if len(m.status) > 0 {
-		s += fmt.Sprintf("%d %s!", m.status)
-	}
-
-	// Send off whatever we came up with above for rendering.
-	return "\n" + s + "\n\n"
-}
-
-func main() {
-	p := tea.NewProgram(model{})
-
-	if err := p.Start(); err != nil {
-		fmt.Printf("Something went wrong, ups. Error: %v", err)
-		os.Exit(1)
-	}
-}
-
-package main
-*/
-// A simple example demonstrating the use of multiple text input components
-// from the Bubbles component library.

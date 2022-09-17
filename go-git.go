@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	git "github.com/go-git/go-git/v5"
@@ -11,14 +12,9 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 )
 
-func findFixVersion() tea.Msg {
+func (m model) findFixVersion() tea.Msg {
 
-	branches := getRemoteBranches()
-
-	// check if main or master
-	for _, branch := range branches {
-		fmt.Println(branch)
-	}
+	//	go m.getRemoteBranches()
 
 	// fetch commit list from ma(in/ster)
 
@@ -31,12 +27,14 @@ func findFixVersion() tea.Msg {
 	// if still present go back even further
 
 	// fmt.Printf("Finding commit hash %s ", ch)
-	return statusMsg(string("It's that basic version"))
+	return m.spinner.Tick()
 }
 
-func getRemoteBranches() []string {
+func (m model) getRemoteBranches() tea.Msg {
 
 	Info("Get all remote branches")
+
+	time.Sleep(4 * time.Second)
 
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
@@ -56,8 +54,12 @@ func getRemoteBranches() []string {
 		if strings.Contains(s, "refs/heads/") {
 			branches = append(branches, s)
 		}
-
 	}
 
-	return branches
+	// check if main or master
+	for _, branch := range branches {
+		fmt.Println(branch)
+	}
+
+	return fixVersionMsg("0.0.1")
 }

@@ -26,13 +26,18 @@ type model struct {
 	focusIndex int
 	inputs     []textinput.Model
 	cursorMode textinput.CursorMode
+	isPending  bool
+	isDone     bool
+	commitHash string
 }
 
 var url = "https://github.com/vpofe/just-in-time"
 
 func initialModel() model {
 	m := model{
-		inputs: make([]textinput.Model, 3),
+		inputs:    make([]textinput.Model, 1),
+		isPending: false,
+		isDone:    false,
 	}
 
 	var t textinput.Model
@@ -43,18 +48,11 @@ func initialModel() model {
 
 		switch i {
 		case 0:
-			t.Placeholder = "Branch"
-			t.SetValue("master")
+			t.Placeholder = "Main/Master Hash"
 			t.Focus()
+			t.CharLimit = 40
 			t.PromptStyle = focusedStyle
 			t.TextStyle = focusedStyle
-		case 1:
-			t.Placeholder = "Commit Hash"
-			t.CharLimit = 64
-		case 2:
-			t.Placeholder = "Password"
-			t.EchoMode = textinput.EchoPassword
-			t.EchoCharacter = '•'
 		}
 
 		m.inputs[i] = t
@@ -96,7 +94,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
 			if s == "enter" && m.focusIndex == len(m.inputs) {
-				return m, checkServer // tea.Quit
+				m.commitHash = m.inputs[0].Value()
+				m.isPending = true
+				return m, findFixVersion // tea.Quit
 			}
 
 			// Cycle indexes
@@ -150,6 +150,10 @@ func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 }
 
 func (m model) View() string {
+	if m.isPending {
+		return "Show fancy loader"
+	}
+
 	var b strings.Builder
 
 	for i := range m.inputs {

@@ -114,7 +114,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if s == "enter" && m.focusIndex == len(m.inputs) {
 				m.commitHash = m.inputs[0].Value()
 				m.isPending = true
-				return m, tea.Batch(m.findFixVersion, m.getRemoteBranches) // tea.Quit
+				return m, tea.Batch(m.spinner.Tick, m.findFixVersion)
 			}
 
 			// Cycle indexes

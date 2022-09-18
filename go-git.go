@@ -14,10 +14,10 @@ import (
 
 func (m model) findFixVersion() tea.Msg {
 
-	//	go m.getRemoteBranches()
+	branches := getRemoteBranches()
 
 	// fetch commit list from ma(in/ster)
-
+	root := getRoot(branches)
 	// check latest release
 	// if not present
 	// return not yet in any release
@@ -27,10 +27,27 @@ func (m model) findFixVersion() tea.Msg {
 	// if still present go back even further
 
 	// fmt.Printf("Finding commit hash %s ", ch)
-	return m.spinner.Tick()
+	return fixVersionMsg(root)
 }
 
-func (m model) getRemoteBranches() tea.Msg {
+func getRoot(root map[string]string) string {
+	// TODO: this should come as default from a flag, lets have, main, master, development fallback
+	if _, exists := root["main"]; exists {
+		return "main"
+	} else {
+		if _, exists := root["master"]; exists {
+			return "master"
+		} else {
+			if _, exists := root["development"]; exists {
+				return "development"
+			} else {
+				panic("no root found")
+			}
+		}
+	}
+}
+
+func getRemoteBranches() map[string]string {
 
 	Info("Get all remote branches")
 
@@ -42,17 +59,34 @@ func (m model) getRemoteBranches() tea.Msg {
 	})
 
 	refs, err := remote.List(&git.ListOptions{})
+
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
 	}
 
-	branches := make([]string, 0)
+	branches := map[string]string{}
 
 	for _, ref := range refs {
 		s := ref.String()
 		if strings.Contains(s, "refs/heads/") {
-			branches = append(branches, s)
+			branchName := strings.SplitAfter(s, "refs/heads/")[1]
+
+			var branchVersion string
+
+			if strings.Contains(branchName, "release/") {
+				branchVersion = strings.SplitAfter(branchName, "release/")[1]
+			} else if strings.Contains(branchName, "releases/") {
+				branchVersion = strings.SplitAfter(branchName, "releases/")[1]
+			} else if strings.Contains(branchName, "release-") {
+				branchVersion = strings.SplitAfter(branchName, "release-")[1]
+			} else if branchName == "main" || branchName == "master" || branchName == "development" {
+				branchVersion = "rootCandidate"
+			} else {
+				branchVersion = "source"
+			}
+
+			branches[branchName] = branchVersion
 		}
 	}
 
@@ -61,5 +95,5 @@ func (m model) getRemoteBranches() tea.Msg {
 		fmt.Println(branch)
 	}
 
-	return fixVersionMsg("0.0.1")
+	return branches
 }

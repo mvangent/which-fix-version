@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -26,17 +25,8 @@ func (m model) findFixVersion() tea.Msg {
 
 	sortedReleases := getSortedReleases(releases)
 
-	fmt.Println(sortedReleases)
-
 	c := getRootCommit(m.commitHash, root)
-	// if not present
-	// return not yet in any release
-	// if in release
-	// go back one earlier
-	// if not present return release
-	// if still present go back even further
 
-	// fmt.Printf("Finding commit hash %s ", ch)
 	var message string
 
 	if c == nil {
@@ -45,32 +35,36 @@ func (m model) findFixVersion() tea.Msg {
 	} else {
 		message = "No fixed version found"
 
+		fixedVersions := make([]string, 0)
+
 		for _, version := range sortedReleases {
 			if isCommitPresentOnBranch(c, releases[version]) {
-				message = version
-				break
+				fixedVersions = append(fixedVersions, version)
 			}
+
+			// FIXME: cancel looking further if previous doesn't have a fixed version any longer
 		}
 
-		return fixVersionMsg(message)
+		if len(fixedVersions) > 0 {
+			return fixVersionMsg(fixedVersions[len(fixedVersions)-1])
+		} else {
+			return fixVersionMsg("No fixed version found")
+		}
 	}
 }
 
 func isCommitPresentOnBranch(rootCommit *object.Commit, branch string) bool {
 	result := false
 
-	Info("git clone https://github.com/vpofe/just-in-time")
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:           "https://github.com/vpofe/just-in-time",
 		ReferenceName: plumbing.ReferenceName(branch),
+		RemoteName:    "origin",
 	})
-
-    fmt.Println(branch)
 
 	CheckIfError(err)
 
 	// Gets the HEAD history from HEAD, just like this command:
-	Info("git log")
 
 	// ... retrieves the branch pointed by HEAD
 	ref, err := r.Head()
@@ -84,7 +78,11 @@ func isCommitPresentOnBranch(rootCommit *object.Commit, branch string) bool {
 
 	// ... just iterates over the commits, printing it
 	err = cIter.ForEach(func(c *object.Commit) error {
-		if c.Message == rootCommit.Message {
+		// FIXME: get to the bottom of isAncestor logic
+		isAncestor, parseErr := rootCommit.IsAncestor(c)
+
+		CheckIfError(parseErr)
+		if isAncestor {
 			result = true
 			return nil
 		}
@@ -116,14 +114,13 @@ func getSortedReleases(releases map[string]string) []string {
 
 func selectRoot(rootCandidates []string) string {
 	// TODO: this should come as default from a flag, lets have, main, master, development fallback
-	return rootCandidates[0]
+	return "main" // rootCandidates[0]
 }
 
 func getRootCommit(hash string, rootBranch string) *object.Commit {
 	// Clones the given repository, creating the remote, the local branches
 	// and fetching the objects, everything in memory:
 	// FIXME: repo should be stored centrally
-	Info("git clone https://github.com/vpofe/just-in-time")
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL: "https://github.com/vpofe/just-in-time",
 	})
@@ -131,8 +128,6 @@ func getRootCommit(hash string, rootBranch string) *object.Commit {
 	CheckIfError(err)
 
 	// Gets the HEAD history from HEAD, just like this command:
-	Info("git log")
-
 	// ... retrieves the branch pointed by HEAD
 	ref, err := r.Head()
 	CheckIfError(err)
@@ -146,7 +141,6 @@ func getRootCommit(hash string, rootBranch string) *object.Commit {
 	var commit *object.Commit
 	// ... just iterates over the commits, printing it
 	err = cIter.ForEach(func(c *object.Commit) error {
-		fmt.Println(c.Hash.String())
 		if c.Hash.String() == hash {
 			commit = c
 			return nil
@@ -160,11 +154,6 @@ func getRootCommit(hash string, rootBranch string) *object.Commit {
 }
 
 func getRemoteBranches() ([]string, map[string]string) {
-
-	Info("Get all remote branches")
-
-	time.Sleep(4 * time.Second)
-
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
 		URLs: []string{"https://github.com/vpofe/just-in-time"},
@@ -183,7 +172,7 @@ func getRemoteBranches() ([]string, map[string]string) {
 	for _, ref := range refs {
 		s := ref.String()
 		if strings.Contains(s, "refs/heads/") {
-			branchName := strings.SplitAfter(s, "refs/heads/")[1]
+			branchName := strings.SplitAfter(s, " ")[1]
 
 			var branchVersion string
 
@@ -197,7 +186,8 @@ func getRemoteBranches() ([]string, map[string]string) {
 				branchVersion = strings.SplitAfter(branchName, "release-")[1]
 				releases[branchVersion] = branchName
 			} else if branchName == "main" || branchName == "master" || branchName == "development" {
-				rootCandidates = append(rootCandidates, branchName)
+				// FIXME: hardcoded main
+				rootCandidates = append(rootCandidates, "main")
 			}
 		}
 	}

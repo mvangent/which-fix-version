@@ -9,7 +9,8 @@ import (
 )
 
 func main() {
-	if err := tea.NewProgram(app.InitialModel()).Start(); err != nil {
+	app := app.NewApp()
+	if err := tea.NewProgram(app.Model).Start(); err != nil {
 		fmt.Printf("could not start program: %s\n", err)
 		os.Exit(1)
 	}

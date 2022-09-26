@@ -1,4 +1,11 @@
 build:
-	go build 
+	go build -o wfv ./cmd/...	
+
+install:
+	go install ./cmd/...
+
 test:
-	go test
+	go test ./...
+
+run:
+	go run ./cmd/...

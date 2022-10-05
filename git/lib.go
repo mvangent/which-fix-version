@@ -25,12 +25,13 @@ func CheckIfError(err error) {
 	os.Exit(1)
 }
 
-func IsCommitPresentOnBranch(rootCommit *object.Commit, branch string) bool {
+func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch string) bool {
 	result := false
 
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:           "https://github.com/vpofe/just-in-time",
+		URL:           repoUrl,
 		ReferenceName: plumbing.ReferenceName(branch),
+        // FIXME: needs to be configurable
 		RemoteName:    "origin",
 	})
 
@@ -43,6 +44,7 @@ func IsCommitPresentOnBranch(rootCommit *object.Commit, branch string) bool {
 	CheckIfError(err)
 
 	// ... retrieves the commit history
+    // FIXME: needs to be configurable
 	since := time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC)
 	until := time.Date(2099, 7, 30, 0, 0, 0, 0, time.UTC)
 	cIter, err := r.Log(&git.LogOptions{From: ref.Hash(), Since: &since, Until: &until})
@@ -90,12 +92,12 @@ func SelectRoot(rootCandidates []string) string {
 	return "main" // rootCandidates[0]
 }
 
-func GetRootCommit(hash string, rootBranch string) *object.Commit {
+func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commit {
 	// Clones the given repository, creating the remote, the local branches
 	// and fetching the objects, everything in memory:
 	// FIXME: repo should be stored centrally
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL: "https://github.com/vpofe/just-in-time",
+		URL: repoUrl,
 	})
 
 	CheckIfError(err)
@@ -127,10 +129,10 @@ func GetRootCommit(hash string, rootBranch string) *object.Commit {
 }
 
 // GetRemoteBranches fetches remote branches from the repo origin
-func GetRemoteBranches() ([]string, map[string]string) {
+func GetRemoteBranches(repoUrl string) ([]string, map[string]string) {
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
-		URLs: []string{"https://github.com/vpofe/just-in-time"},
+		URLs: []string{repoUrl},
 	})
 
 	refs, err := remote.List(&git.ListOptions{})

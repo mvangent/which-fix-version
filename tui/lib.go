@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/vpofe/just-in-time/git"
+	"github.com/vpofe/which-fix-version/git"
 )
 
 var (
@@ -34,11 +34,11 @@ type Model struct {
 	fixVersion string
 }
 
-var url = "https://github.com/vpofe/just-in-time"
+var url = "https://github.com/vpofe/which-fix-version"
 
 func InitialModel() Model {
 	m := Model{
-		inputs:    make([]textinput.Model, 1),
+		inputs:    make([]textinput.Model, 2),
 		isPending: false,
 		isDone:    false,
 	}
@@ -56,6 +56,10 @@ func InitialModel() Model {
 			t.CharLimit = 40
 			t.PromptStyle = focusedStyle
 			t.TextStyle = focusedStyle
+        case 1:
+            t.Placeholder = "Repository URL"
+            t.CharLimit = 100
+            t.SetValue(url)
 		}
 
 		m.inputs[i] = t
@@ -206,8 +210,9 @@ func (m Model) View() string {
 }
 
 func (m Model) findFixVersion() tea.Msg {
+    repoUrl := m.inputs[1].Value()
 
-	rootCandidates, releases := git.GetRemoteBranches()
+	rootCandidates, releases := git.GetRemoteBranches(repoUrl)
 
 	// fetch commit list from ma(in/ster)
 	root := git.SelectRoot(rootCandidates)
@@ -215,7 +220,7 @@ func (m Model) findFixVersion() tea.Msg {
 
 	sortedReleases := git.GetSortedReleases(releases)
 
-	c := git.GetRootCommit(m.commitHash, root)
+	c := git.GetRootCommit(repoUrl, m.commitHash, root)
 
 	var message string
 
@@ -228,7 +233,7 @@ func (m Model) findFixVersion() tea.Msg {
 		fixedVersions := make([]string, 0)
 
 		for _, version := range sortedReleases {
-			if git.IsCommitPresentOnBranch(c, releases[version]) {
+			if git.IsCommitPresentOnBranch(repoUrl, c, releases[version]) {
 				fixedVersions = append(fixedVersions, version)
 			}
 

@@ -1,6 +1,6 @@
 package app
 
-import "github.com/vpofe/just-in-time/tui"
+import "github.com/vpofe/which-fix-version/tui"
 
 type App struct {
 	Model tui.Model

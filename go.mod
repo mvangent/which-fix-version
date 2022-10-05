@@ -1,4 +1,4 @@
-module github.com/vpofe/just-in-time
+module github.com/vpofe/which-fix-version
 
 go 1.19
 

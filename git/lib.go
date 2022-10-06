@@ -25,14 +25,13 @@ func CheckIfError(err error) {
 	os.Exit(1)
 }
 
-func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch string) bool {
+func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch string, remoteName string) bool {
 	result := false
 
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:           repoUrl,
 		ReferenceName: plumbing.ReferenceName(branch),
-		// FIXME: needs to be configurable
-		RemoteName: "origin",
+		RemoteName:    remoteName,
 	})
 
 	CheckIfError(err)
@@ -45,7 +44,7 @@ func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch s
 
 	// ... retrieves the commit history
 	// FIXME: needs to be configurable
-	since := time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC)
+	since := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	until := time.Date(2099, 7, 30, 0, 0, 0, 0, time.UTC)
 	cIter, err := r.Log(&git.LogOptions{From: ref.Hash(), Since: &since, Until: &until})
 	CheckIfError(err)
@@ -128,15 +127,7 @@ func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commi
 }
 
 // RemoteRemoteBranches fetches remote branches from the repo origin and filters out the root and release branches
-func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranchIdentifiers []string, upstreamName string) ([]string, map[string]string) {
-	var remoteName string
-
-	if upstreamName == "" {
-		remoteName = "origin"
-	} else {
-		remoteName = upstreamName
-	}
-
+func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranchIdentifiers []string, remoteName string) ([]string, map[string]string) {
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: remoteName,
 		URLs: []string{repoUrl},

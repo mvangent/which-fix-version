@@ -222,6 +222,7 @@ func (m Model) View() string {
 }
 
 func (m Model) findFixVersion() tea.Msg {
+	// FIXME make readable map for inputs
 	repoUrl := m.inputs[1].Value()
 
 	releaseIdentifiers := make([]string, 0)
@@ -249,7 +250,7 @@ func (m Model) findFixVersion() tea.Msg {
 		fixedVersions := make([]string, 0)
 
 		for _, version := range sortedReleases {
-			if git.IsCommitPresentOnBranch(repoUrl, c, releases[version]) {
+			if git.IsCommitPresentOnBranch(repoUrl, c, releases[version], m.inputs[2].Value()) {
 				fixedVersions = append(fixedVersions, version)
 			} else {
 				// Cancel looking further if previous doesn't have a fixed version any longer

@@ -31,8 +31,8 @@ func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch s
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:           repoUrl,
 		ReferenceName: plumbing.ReferenceName(branch),
-        // FIXME: needs to be configurable
-		RemoteName:    "origin",
+		// FIXME: needs to be configurable
+		RemoteName: "origin",
 	})
 
 	CheckIfError(err)
@@ -44,7 +44,7 @@ func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch s
 	CheckIfError(err)
 
 	// ... retrieves the commit history
-    // FIXME: needs to be configurable
+	// FIXME: needs to be configurable
 	since := time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC)
 	until := time.Date(2099, 7, 30, 0, 0, 0, 0, time.UTC)
 	cIter, err := r.Log(&git.LogOptions{From: ref.Hash(), Since: &since, Until: &until})
@@ -95,7 +95,6 @@ func SelectRoot(rootCandidates []string) string {
 func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commit {
 	// Clones the given repository, creating the remote, the local branches
 	// and fetching the objects, everything in memory:
-	// FIXME: repo should be stored centrally
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL: repoUrl,
 	})
@@ -128,10 +127,18 @@ func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commi
 	return commit
 }
 
-// GetRemoteBranches fetches remote branches from the repo origin
-func GetRemoteBranches(repoUrl string) ([]string, map[string]string) {
+// RemoteRemoteBranches fetches remote branches from the repo origin and filters out the root and release branches
+func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranchIdentifiers []string, upstreamName string) ([]string, map[string]string) {
+	var remoteName string
+
+	if upstreamName == "" {
+		remoteName = "origin"
+	} else {
+		remoteName = upstreamName
+	}
+
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
-		Name: "origin",
+		Name: remoteName,
 		URLs: []string{repoUrl},
 	})
 
@@ -152,18 +159,15 @@ func GetRemoteBranches(repoUrl string) ([]string, map[string]string) {
 
 			var branchVersion string
 
-			if strings.Contains(branchName, "release/") {
-				branchVersion = strings.SplitAfter(branchName, "release/")[1]
-				releases[branchVersion] = branchName
-			} else if strings.Contains(branchName, "releases/") {
-				branchVersion = strings.SplitAfter(branchName, "releases/")[1]
-				releases[branchVersion] = branchName
-			} else if strings.Contains(branchName, "release-") {
-				branchVersion = strings.SplitAfter(branchName, "release-")[1]
-				releases[branchVersion] = branchName
-			} else if branchName == "main" || branchName == "master" || branchName == "development" {
-				// FIXME: hardcoded main
-				rootCandidates = append(rootCandidates, "main")
+			for _, releaseIdentifier := range releaseBranchIdentifiers {
+				if strings.Contains(branchName, releaseIdentifier) {
+					branchVersion = strings.SplitAfter(branchName, releaseIdentifier)[1]
+					releases[branchVersion] = branchName
+				}
+			}
+
+			if branchName == developBranchName {
+				rootCandidates = append(rootCandidates, developBranchName)
 			}
 		}
 	}

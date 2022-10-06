@@ -38,7 +38,7 @@ var url = "https://github.com/vpofe/which-fix-version"
 
 func InitialModel() Model {
 	m := Model{
-		inputs:    make([]textinput.Model, 2),
+		inputs:    make([]textinput.Model, 5),
 		isPending: false,
 		isDone:    false,
 	}
@@ -51,15 +51,27 @@ func InitialModel() Model {
 
 		switch i {
 		case 0:
-			t.Placeholder = "Main/Master Hash"
+			t.Placeholder = "Commit Hash"
 			t.Focus()
 			t.CharLimit = 40
 			t.PromptStyle = focusedStyle
 			t.TextStyle = focusedStyle
-        case 1:
-            t.Placeholder = "Repository URL"
-            t.CharLimit = 100
-            t.SetValue(url)
+		case 1:
+			t.Placeholder = "Repository URL"
+			t.CharLimit = 100
+			t.SetValue(url)
+		case 2:
+			t.Placeholder = "Remote Name"
+			t.CharLimit = 100
+			t.SetValue("origin")
+		case 3:
+			t.Placeholder = "Development Branch Name"
+			t.CharLimit = 20
+			t.SetValue("main")
+		case 4:
+			t.Placeholder = "Release Identifiers"
+			t.CharLimit = 120
+			t.SetValue("release- release/ releases/")
 		}
 
 		m.inputs[i] = t
@@ -210,9 +222,13 @@ func (m Model) View() string {
 }
 
 func (m Model) findFixVersion() tea.Msg {
-    repoUrl := m.inputs[1].Value()
+	repoUrl := m.inputs[1].Value()
 
-	rootCandidates, releases := git.GetRemoteBranches(repoUrl)
+	releaseIdentifiers := make([]string, 0)
+
+	releaseIdentifiers = append(releaseIdentifiers, strings.Split(m.inputs[4].Value(), " ")...)
+
+	rootCandidates, releases := git.FormatRemoteBranches(repoUrl, m.inputs[3].Value(), releaseIdentifiers, m.inputs[2].Value())
 
 	// fetch commit list from ma(in/ster)
 	root := git.SelectRoot(rootCandidates)
@@ -235,9 +251,12 @@ func (m Model) findFixVersion() tea.Msg {
 		for _, version := range sortedReleases {
 			if git.IsCommitPresentOnBranch(repoUrl, c, releases[version]) {
 				fixedVersions = append(fixedVersions, version)
+			} else {
+				// Cancel looking further if previous doesn't have a fixed version any longer
+				if len(fixedVersions) > 0 {
+					break
+				}
 			}
-
-			// FIXME: cancel looking further if previous doesn't have a fixed version any longer
 		}
 
 		if len(fixedVersions) > 0 {

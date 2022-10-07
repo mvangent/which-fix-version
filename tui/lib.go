@@ -46,16 +46,17 @@ func InitialModel() Model {
 	var t textinput.Model
 	for i := range m.inputs {
 		t = textinput.New()
-		t.CursorStyle = cursorStyle
 		t.CharLimit = 32
 
 		switch i {
 		case 0:
 			t.Placeholder = "Commit Hash"
+            t.CursorStyle = cursorStyle
 			t.Focus()
 			t.CharLimit = 40
 			t.PromptStyle = focusedStyle
 			t.TextStyle = focusedStyle
+            t.SetValue("4d5671af9791dc8b03f4596505d98fa9f3757e7d")
 		case 1:
 			t.Placeholder = "Repository URL"
 			t.CharLimit = 100

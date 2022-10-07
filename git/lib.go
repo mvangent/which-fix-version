@@ -2,18 +2,48 @@ package git
 
 import (
 	"fmt"
-	"log"
+	// "log"
 	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
+	// "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
 )
+
+func getPublicKeys() *ssh.PublicKeys {
+    privateKeyFile := fmt.Sprintf("%s/.ssh/id_rsa", os.Getenv("HOME"))
+    
+   /* sshKey, err := ioutil.ReadFile(s)
+    signer, err := ssh.ParsePrivateKey([]byte(sshKey))
+    auth := &gitssh.PublicKeys{User: "git", Signer: signer}
+    
+    */
+    password := ""
+
+    _, err := os.Stat(privateKeyFile)
+
+    if err != nil {
+        fmt.Printf("read file %s failed %s\n", privateKeyFile, err.Error())
+        os.Exit(1)
+    }
+
+    publicKeys, err := ssh.NewPublicKeysFromFile("git", privateKeyFile, password)
+
+    if err != nil {
+        fmt.Printf("generate publickeys failed: %s\n", err.Error())
+        os.Exit(1)
+    }
+
+    fmt.Print(publicKeys)
+
+    return publicKeys 
+}
 
 // CheckIfError should be used to naively panics if an error is not nil.
 func CheckIfError(err error) {
@@ -25,6 +55,7 @@ func CheckIfError(err error) {
 	os.Exit(1)
 }
 
+
 func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch string, remoteName string) bool {
 	result := false
 
@@ -32,6 +63,7 @@ func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch s
 		URL:           repoUrl,
 		ReferenceName: plumbing.ReferenceName(branch),
 		RemoteName:    remoteName,
+		Auth:          getPublicKeys(),
 	})
 
 	CheckIfError(err)
@@ -95,7 +127,8 @@ func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commi
 	// Clones the given repository, creating the remote, the local branches
 	// and fetching the objects, everything in memory:
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL: repoUrl,
+		URL:  repoUrl,
+		Auth: getPublicKeys(),
 	})
 
 	CheckIfError(err)
@@ -128,7 +161,7 @@ func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commi
 
 // RemoteRemoteBranches fetches remote branches from the repo origin and filters out the root and release branches
 func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranchIdentifiers []string, remoteName string) ([]string, map[string]string) {
-	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+    /*	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: remoteName,
 		URLs: []string{repoUrl},
 	})
@@ -139,29 +172,53 @@ func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranc
 		log.Fatal(err)
 		panic(err)
 	}
+    
+    */
 
-	releases := make(map[string]string)
-	rootCandidates := make([]string, 0)
+   	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+		URL:           repoUrl,
+		RemoteName:    remoteName,
+		Auth:          getPublicKeys(),
+	})
 
-	for _, ref := range refs {
-		s := ref.String()
-		if strings.Contains(s, "refs/heads/") {
-			branchName := strings.SplitAfter(s, " ")[1]
+    if err != nil {
+        panic(err)
+    }
 
-			var branchVersion string
+    sIter, err := r.Branches()
 
-			for _, releaseIdentifier := range releaseBranchIdentifiers {
-				if strings.Contains(branchName, releaseIdentifier) {
-					branchVersion = strings.SplitAfter(branchName, releaseIdentifier)[1]
-					releases[branchVersion] = branchName
-				}
-			}
+    if err != nil {
+        panic(err)
+    }
 
-			if branchName == developBranchName {
-				rootCandidates = append(rootCandidates, developBranchName)
-			}
-		}
-	}
+    releases := make(map[string]string)
+    rootCandidates := make([]string, 0)
+
+    err = sIter.ForEach(func(r *plumbing.Reference) error {
+        fmt.Println(r.String())
+        s := r.String()
+        if strings.Contains(s, "refs/heads/") {
+            branchName := strings.SplitAfter(s, " ")[1]
+
+            var branchVersion string
+
+            for _, releaseIdentifier := range releaseBranchIdentifiers {
+                if strings.Contains(branchName, releaseIdentifier) {
+                    branchVersion = strings.SplitAfter(branchName, releaseIdentifier)[1]
+                    releases[branchVersion] = branchName
+                }
+            }
+
+            if branchName == developBranchName {
+                rootCandidates = append(rootCandidates, developBranchName)
+            }
+        }
+
+        return nil
+    })
+
+	/* for _, ref := range refs {
+	} */
 
 	return rootCandidates, releases
 }

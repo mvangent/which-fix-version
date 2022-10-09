@@ -41,11 +41,6 @@ func getPublicKeys() *ssh.PublicKeys {
 		os.Exit(1)
 	}
 
-	fmt.Println(privateKeyFile)
-
-	fmt.Println(publicKeys)
-	fmt.Println(publicKeys.Signer.PublicKey().Type())
-
 	return publicKeys
 }
 
@@ -178,13 +173,11 @@ func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranc
 
 	*/
 
-	auth := getPublicKeys()
-
 	fmt.Println("RIGHT BEFORE")
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:        repoUrl,
 		RemoteName: remoteName,
-		Auth:       auth,
+		Auth:       getPublicKeys(),
 		/* Auth:      &http.BasicAuth{
 		   Username: "vpofe",
 		   Password: "vuT:lauj%aiC<Noam#da",}, */
@@ -202,7 +195,8 @@ func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranc
 
 	releases := make(map[string]string)
 	rootCandidates := make([]string, 0)
-
+    
+    fmt.Println(sIter.Next())
 	err = sIter.ForEach(func(r *plumbing.Reference) error {
 		fmt.Println(r.String())
 		s := r.String()

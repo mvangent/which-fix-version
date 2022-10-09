@@ -34,7 +34,7 @@ type Model struct {
 	fixVersion string
 }
 
-var url = "https://github.com/vpofe/which-fix-version"
+var url = "git@github.com:vpofe/which-fix-version.git"
 
 func InitialModel() Model {
 	m := Model{

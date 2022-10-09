@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v5"
+
 	// "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -17,7 +18,7 @@ import (
 )
 
 func getPublicKeys() *ssh.PublicKeys {
-	privateKeyFile := fmt.Sprintf("%s/.ssh/id_rsa", os.Getenv("HOME"))
+	privateKeyFile := fmt.Sprintf("%s/.ssh/id_ecdsa", os.Getenv("HOME"))
 
 	/* sshKey, err := ioutil.ReadFile(s)
 	   signer, err := ssh.ParsePrivateKey([]byte(sshKey))
@@ -40,7 +41,10 @@ func getPublicKeys() *ssh.PublicKeys {
 		os.Exit(1)
 	}
 
-	fmt.Print(publicKeys)
+	fmt.Println(privateKeyFile)
+
+	fmt.Println(publicKeys)
+	fmt.Println(publicKeys.Signer.PublicKey().Type())
 
 	return publicKeys
 }
@@ -174,10 +178,16 @@ func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranc
 
 	*/
 
+	auth := getPublicKeys()
+
+	fmt.Println("RIGHT BEFORE")
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:        repoUrl,
 		RemoteName: remoteName,
-		Auth:       getPublicKeys(),
+		Auth:       auth,
+		/* Auth:      &http.BasicAuth{
+		   Username: "vpofe",
+		   Password: "vuT:lauj%aiC<Noam#da",}, */
 	})
 
 	if err != nil {
@@ -216,6 +226,9 @@ func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranc
 		return nil
 	})
 
+	if err != nil {
+		panic(err)
+	}
 	/* for _, ref := range refs {
 	} */
 

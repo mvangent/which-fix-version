@@ -230,15 +230,12 @@ func (m Model) findFixVersion() tea.Msg {
 
 	releaseIdentifiers = append(releaseIdentifiers, strings.Split(m.inputs[4].Value(), " ")...)
 
-	rootCandidates, releases := git.FormatRemoteBranches(repoUrl, m.inputs[3].Value(), releaseIdentifiers, m.inputs[2].Value())
+	releases := git.FormatRemoteReleaseBranches(repoUrl, releaseIdentifiers, m.inputs[2].Value())
 
-	// fetch commit list from ma(in/ster)
-	root := git.SelectRoot(rootCandidates)
-	// check latest release
-
+	// FIXME: sorting logic in GetSortedReleases
 	sortedReleases := git.GetSortedReleases(releases)
 
-	c := git.GetRootCommit(repoUrl, m.commitHash, root)
+	c := git.GetRootCommit(repoUrl, m.commitHash, m.inputs[3].Value())
 
 	var message string
 

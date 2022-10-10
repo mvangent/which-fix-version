@@ -2,6 +2,8 @@ package git
 
 import (
 	"fmt"
+	"log"
+
 	// "log"
 	"os"
 	"sort"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 
 	// "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -115,18 +118,14 @@ func GetSortedReleases(releases map[string]string) []string {
 	return versions
 }
 
-// SelectRoot is some kind of property where we are not yet sure how it should be impl
-func SelectRoot(rootCandidates []string) string {
-	// TODO: this should come as default from a flag, lets have, main, master, development fallback
-	return "main" // rootCandidates[0]
-}
-
 func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commit {
 	// Clones the given repository, creating the remote, the local branches
 	// and fetching the objects, everything in memory:
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:  repoUrl,
-		Auth: getPublicKeys(),
+		URL:           repoUrl,
+		Auth:          getPublicKeys(),
+		ReferenceName: plumbing.ReferenceName(strings.Join([]string{"refs/heads", rootBranch}, "/")),
+		SingleBranch:  true,
 	})
 
 	CheckIfError(err)
@@ -158,48 +157,24 @@ func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commi
 }
 
 // RemoteRemoteBranches fetches remote branches from the repo origin and filters out the root and release branches
-func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranchIdentifiers []string, remoteName string) ([]string, map[string]string) {
-	/*	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
-			Name: remoteName,
-			URLs: []string{repoUrl},
-		})
-
-		refs, err := remote.List(&git.ListOptions{})
-
-		if err != nil {
-			log.Fatal(err)
-			panic(err)
-		}
-
-	*/
-
-	fmt.Println("RIGHT BEFORE")
-	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:        repoUrl,
-		RemoteName: remoteName,
-		Auth:       getPublicKeys(),
-		/* Auth:      &http.BasicAuth{
-		   Username: "vpofe",
-		   Password: "vuT:lauj%aiC<Noam#da",}, */
+func FormatRemoteReleaseBranches(repoUrl string, releaseBranchIdentifiers []string, remoteName string) map[string]string {
+	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: remoteName,
+		URLs: []string{repoUrl},
 	})
 
-	if err != nil {
-		panic(err)
-	}
-
-	sIter, err := r.Branches()
+	refs, err := remote.List(&git.ListOptions{Auth: getPublicKeys()})
 
 	if err != nil {
+		log.Fatal(err)
 		panic(err)
 	}
 
 	releases := make(map[string]string)
-	rootCandidates := make([]string, 0)
-    
-    fmt.Println(sIter.Next())
-	err = sIter.ForEach(func(r *plumbing.Reference) error {
-		fmt.Println(r.String())
+
+	for _, r := range refs {
 		s := r.String()
+
 		if strings.Contains(s, "refs/heads/") {
 			branchName := strings.SplitAfter(s, " ")[1]
 
@@ -211,20 +186,12 @@ func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranc
 					releases[branchVersion] = branchName
 				}
 			}
-
-			if branchName == developBranchName {
-				rootCandidates = append(rootCandidates, developBranchName)
-			}
 		}
-
-		return nil
-	})
+	}
 
 	if err != nil {
 		panic(err)
 	}
-	/* for _, ref := range refs {
-	} */
 
-	return rootCandidates, releases
+	return releases
 }

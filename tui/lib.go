@@ -34,11 +34,11 @@ type Model struct {
 	fixVersion string
 }
 
-var url = "https://github.com/vpofe/which-fix-version"
+var url = "git@github.com:vpofe/which-fix-version.git"
 
 func InitialModel() Model {
 	m := Model{
-		inputs:    make([]textinput.Model, 5),
+		inputs:    make([]textinput.Model, 7),
 		isPending: false,
 		isDone:    false,
 	}
@@ -46,16 +46,17 @@ func InitialModel() Model {
 	var t textinput.Model
 	for i := range m.inputs {
 		t = textinput.New()
-		t.CursorStyle = cursorStyle
 		t.CharLimit = 32
 
 		switch i {
 		case 0:
 			t.Placeholder = "Commit Hash"
+			t.CursorStyle = cursorStyle
 			t.Focus()
 			t.CharLimit = 40
 			t.PromptStyle = focusedStyle
 			t.TextStyle = focusedStyle
+			t.SetValue("4d5671af9791dc8b03f4596505d98fa9f3757e7d")
 		case 1:
 			t.Placeholder = "Repository URL"
 			t.CharLimit = 100
@@ -72,6 +73,17 @@ func InitialModel() Model {
 			t.Placeholder = "Release Identifiers"
 			t.CharLimit = 120
 			t.SetValue("release- release/ releases/")
+		case 5:
+			t.Placeholder = "Private Key Filename"
+			// FIXME: char limit for private key file names
+			t.CharLimit = 120
+			t.SetValue("id_ecdsa")
+		case 6:
+			t.Placeholder = "Private Key Passphrase"
+			// FIXME: figure out max char value
+			t.CharLimit = 120
+			t.SetValue("")
+
 		}
 
 		m.inputs[i] = t
@@ -226,18 +238,19 @@ func (m Model) findFixVersion() tea.Msg {
 	repoUrl := m.inputs[1].Value()
 
 	releaseIdentifiers := make([]string, 0)
-
 	releaseIdentifiers = append(releaseIdentifiers, strings.Split(m.inputs[4].Value(), " ")...)
 
-	rootCandidates, releases := git.FormatRemoteBranches(repoUrl, m.inputs[3].Value(), releaseIdentifiers, m.inputs[2].Value())
+	authOptions := git.AuthOptions{
+		PrivateKeyFilename: m.inputs[5].Value(),
+		PkPassphrase:       m.inputs[6].Value(),
+	}
 
-	// fetch commit list from ma(in/ster)
-	root := git.SelectRoot(rootCandidates)
-	// check latest release
+	releases := git.FormatRemoteReleaseBranches(repoUrl, releaseIdentifiers, m.inputs[2].Value(), &authOptions)
 
+	// FIXME: sorting logic in GetSortedReleases
 	sortedReleases := git.GetSortedReleases(releases)
 
-	c := git.GetRootCommit(repoUrl, m.commitHash, root)
+	c := git.GetRootCommit(repoUrl, m.commitHash, m.inputs[3].Value(), &authOptions)
 
 	var message string
 
@@ -250,7 +263,7 @@ func (m Model) findFixVersion() tea.Msg {
 		fixedVersions := make([]string, 0)
 
 		for _, version := range sortedReleases {
-			if git.IsCommitPresentOnBranch(repoUrl, c, releases[version], m.inputs[2].Value()) {
+			if git.IsCommitPresentOnBranch(repoUrl, c, releases[version], m.inputs[2].Value(), &authOptions) {
 				fixedVersions = append(fixedVersions, version)
 			} else {
 				// Cancel looking further if previous doesn't have a fixed version any longer

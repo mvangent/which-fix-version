@@ -3,6 +3,8 @@ package git
 import (
 	"fmt"
 	"log"
+
+	// "log"
 	"os"
 	"sort"
 	"strings"
@@ -10,10 +12,40 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
+
+	// "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
 )
+
+type AuthOptions struct {
+	PrivateKeyFilename string
+	PkPassphrase       string
+}
+
+func getPublicKeys(authOptions *AuthOptions) *ssh.PublicKeys {
+	privateKeyFile := fmt.Sprintf("%s/.ssh/%s", os.Getenv("HOME"), authOptions.PrivateKeyFilename)
+
+	password := authOptions.PkPassphrase
+
+	_, err := os.Stat(privateKeyFile)
+
+	if err != nil {
+		fmt.Printf("read file %s failed %s\n", privateKeyFile, err.Error())
+		os.Exit(1)
+	}
+
+	publicKeys, err := ssh.NewPublicKeysFromFile("git", privateKeyFile, password)
+
+	if err != nil {
+		fmt.Printf("generate publickeys failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	return publicKeys
+}
 
 // CheckIfError should be used to naively panics if an error is not nil.
 func CheckIfError(err error) {
@@ -25,13 +57,14 @@ func CheckIfError(err error) {
 	os.Exit(1)
 }
 
-func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch string, remoteName string) bool {
+func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch string, remoteName string, authOptions *AuthOptions) bool {
 	result := false
 
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:           repoUrl,
 		ReferenceName: plumbing.ReferenceName(branch),
 		RemoteName:    remoteName,
+		Auth:          getPublicKeys(authOptions),
 	})
 
 	CheckIfError(err)
@@ -85,17 +118,14 @@ func GetSortedReleases(releases map[string]string) []string {
 	return versions
 }
 
-// SelectRoot is some kind of property where we are not yet sure how it should be impl
-func SelectRoot(rootCandidates []string) string {
-	// TODO: this should come as default from a flag, lets have, main, master, development fallback
-	return "main" // rootCandidates[0]
-}
-
-func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commit {
+func GetRootCommit(repoUrl string, hash string, rootBranch string, authOptions *AuthOptions) *object.Commit {
 	// Clones the given repository, creating the remote, the local branches
 	// and fetching the objects, everything in memory:
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL: repoUrl,
+		URL:           repoUrl,
+		Auth:          getPublicKeys(authOptions),
+		ReferenceName: plumbing.ReferenceName(strings.Join([]string{"refs/heads", rootBranch}, "/")),
+		SingleBranch:  true,
 	})
 
 	CheckIfError(err)
@@ -127,13 +157,13 @@ func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commi
 }
 
 // RemoteRemoteBranches fetches remote branches from the repo origin and filters out the root and release branches
-func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranchIdentifiers []string, remoteName string) ([]string, map[string]string) {
+func FormatRemoteReleaseBranches(repoUrl string, releaseBranchIdentifiers []string, remoteName string, authOptions *AuthOptions) map[string]string {
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: remoteName,
 		URLs: []string{repoUrl},
 	})
 
-	refs, err := remote.List(&git.ListOptions{})
+	refs, err := remote.List(&git.ListOptions{Auth: getPublicKeys(authOptions)})
 
 	if err != nil {
 		log.Fatal(err)
@@ -141,10 +171,10 @@ func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranc
 	}
 
 	releases := make(map[string]string)
-	rootCandidates := make([]string, 0)
 
-	for _, ref := range refs {
-		s := ref.String()
+	for _, r := range refs {
+		s := r.String()
+
 		if strings.Contains(s, "refs/heads/") {
 			branchName := strings.SplitAfter(s, " ")[1]
 
@@ -156,12 +186,12 @@ func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranc
 					releases[branchVersion] = branchName
 				}
 			}
-
-			if branchName == developBranchName {
-				rootCandidates = append(rootCandidates, developBranchName)
-			}
 		}
 	}
 
-	return rootCandidates, releases
+	if err != nil {
+		panic(err)
+	}
+
+	return releases
 }

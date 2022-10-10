@@ -15,7 +15,14 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 )
 
-// CheckIfError should be used to naively panics if an error is not nil.
+type GitConfig struct {
+	CommitHash                      string
+	URL                             string
+	RemoteName                      string
+	DevelopBranchName               string
+	ReleaseBranchPrependIdentifiers []string
+}
+
 func CheckIfError(err error) {
 	if err == nil {
 		return
@@ -25,19 +32,19 @@ func CheckIfError(err error) {
 	os.Exit(1)
 }
 
-func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch string, remoteName string) bool {
+func IsCommitPresentOnBranch(config *GitConfig, rootCommit *object.Commit, branch string) bool {
 	result := false
 
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:           repoUrl,
+		URL:           config.URL,
+		RemoteName:    config.RemoteName,
 		ReferenceName: plumbing.ReferenceName(branch),
-		RemoteName:    remoteName,
+		SingleBranch:  true,
 	})
 
 	CheckIfError(err)
 
 	// Gets the HEAD history from HEAD, just like this command:
-
 	// ... retrieves the branch pointed by HEAD
 	ref, err := r.Head()
 	CheckIfError(err)
@@ -85,17 +92,15 @@ func GetSortedReleases(releases map[string]string) []string {
 	return versions
 }
 
-// SelectRoot is some kind of property where we are not yet sure how it should be impl
-func SelectRoot(rootCandidates []string) string {
-	// TODO: this should come as default from a flag, lets have, main, master, development fallback
-	return "main" // rootCandidates[0]
-}
-
-func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commit {
+func GetRootCommit(gitConfig *GitConfig) *object.Commit {
 	// Clones the given repository, creating the remote, the local branches
 	// and fetching the objects, everything in memory:
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL: repoUrl,
+		URL:        gitConfig.URL,
+		RemoteName: gitConfig.RemoteName,
+		// FIXME: figure out why plumbing is not working
+		ReferenceName: plumbing.ReferenceName(strings.Join([]string{"refs/heads", gitConfig.DevelopBranchName}, "/")),
+		SingleBranch:  true,
 	})
 
 	CheckIfError(err)
@@ -105,8 +110,8 @@ func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commi
 	ref, err := r.Head()
 	CheckIfError(err)
 
-	// ... retrieves the commit history
-	since := time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC)
+	// FIXME: yes this is hardcoded and will fixed later, but don't want to ddos enterprise repos
+	since := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	until := time.Date(2099, 7, 30, 0, 0, 0, 0, time.UTC)
 	cIter, err := r.Log(&git.LogOptions{From: ref.Hash(), Since: &since, Until: &until})
 	CheckIfError(err)
@@ -114,7 +119,7 @@ func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commi
 	var commit *object.Commit
 	// ... just iterates over the commits, printing it
 	err = cIter.ForEach(func(c *object.Commit) error {
-		if c.Hash.String() == hash {
+		if c.Hash.String() == gitConfig.CommitHash {
 			commit = c
 			return nil
 		}
@@ -127,10 +132,10 @@ func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commi
 }
 
 // RemoteRemoteBranches fetches remote branches from the repo origin and filters out the root and release branches
-func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranchIdentifiers []string, remoteName string) ([]string, map[string]string) {
+func FormatRemoteBranches(gitConfig *GitConfig) map[string]string {
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
-		Name: remoteName,
-		URLs: []string{repoUrl},
+		Name: gitConfig.RemoteName,
+		URLs: []string{gitConfig.URL},
 	})
 
 	refs, err := remote.List(&git.ListOptions{})
@@ -141,27 +146,23 @@ func FormatRemoteBranches(repoUrl string, developBranchName string, releaseBranc
 	}
 
 	releases := make(map[string]string)
-	rootCandidates := make([]string, 0)
 
 	for _, ref := range refs {
 		s := ref.String()
+		// FIXME: find a better helper
 		if strings.Contains(s, "refs/heads/") {
 			branchName := strings.SplitAfter(s, " ")[1]
 
 			var branchVersion string
 
-			for _, releaseIdentifier := range releaseBranchIdentifiers {
+			for _, releaseIdentifier := range gitConfig.ReleaseBranchPrependIdentifiers {
 				if strings.Contains(branchName, releaseIdentifier) {
 					branchVersion = strings.SplitAfter(branchName, releaseIdentifier)[1]
 					releases[branchVersion] = branchName
 				}
 			}
-
-			if branchName == developBranchName {
-				rootCandidates = append(rootCandidates, developBranchName)
-			}
 		}
 	}
 
-	return rootCandidates, releases
+	return releases
 }

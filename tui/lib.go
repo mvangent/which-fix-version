@@ -38,7 +38,7 @@ var url = "git@github.com:vpofe/which-fix-version.git"
 
 func InitialModel() Model {
 	m := Model{
-		inputs:    make([]textinput.Model, 5),
+		inputs:    make([]textinput.Model, 7),
 		isPending: false,
 		isDone:    false,
 	}
@@ -73,6 +73,17 @@ func InitialModel() Model {
 			t.Placeholder = "Release Identifiers"
 			t.CharLimit = 120
 			t.SetValue("release- release/ releases/")
+		case 5:
+			t.Placeholder = "Private Key Filename"
+			// FIXME: char limit for private key file names
+			t.CharLimit = 120
+			t.SetValue("id_ecdsa")
+		case 6:
+			t.Placeholder = "Private Key Passphrase"
+			// FIXME: figure out max char value
+			t.CharLimit = 120
+			t.SetValue("")
+
 		}
 
 		m.inputs[i] = t
@@ -227,15 +238,19 @@ func (m Model) findFixVersion() tea.Msg {
 	repoUrl := m.inputs[1].Value()
 
 	releaseIdentifiers := make([]string, 0)
-
 	releaseIdentifiers = append(releaseIdentifiers, strings.Split(m.inputs[4].Value(), " ")...)
 
-	releases := git.FormatRemoteReleaseBranches(repoUrl, releaseIdentifiers, m.inputs[2].Value())
+	authOptions := git.AuthOptions{
+		PrivateKeyFilename: m.inputs[5].Value(),
+		PkPassphrase:       m.inputs[6].Value(),
+	}
+
+	releases := git.FormatRemoteReleaseBranches(repoUrl, releaseIdentifiers, m.inputs[2].Value(), &authOptions)
 
 	// FIXME: sorting logic in GetSortedReleases
 	sortedReleases := git.GetSortedReleases(releases)
 
-	c := git.GetRootCommit(repoUrl, m.commitHash, m.inputs[3].Value())
+	c := git.GetRootCommit(repoUrl, m.commitHash, m.inputs[3].Value(), &authOptions)
 
 	var message string
 
@@ -248,7 +263,7 @@ func (m Model) findFixVersion() tea.Msg {
 		fixedVersions := make([]string, 0)
 
 		for _, version := range sortedReleases {
-			if git.IsCommitPresentOnBranch(repoUrl, c, releases[version], m.inputs[2].Value()) {
+			if git.IsCommitPresentOnBranch(repoUrl, c, releases[version], m.inputs[2].Value(), &authOptions) {
 				fixedVersions = append(fixedVersions, version)
 			} else {
 				// Cancel looking further if previous doesn't have a fixed version any longer

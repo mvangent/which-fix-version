@@ -20,15 +20,15 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 )
 
-func getPublicKeys() *ssh.PublicKeys {
-	privateKeyFile := fmt.Sprintf("%s/.ssh/id_ecdsa", os.Getenv("HOME"))
+type AuthOptions struct {
+	PrivateKeyFilename string
+	PkPassphrase       string
+}
 
-	/* sshKey, err := ioutil.ReadFile(s)
-	   signer, err := ssh.ParsePrivateKey([]byte(sshKey))
-	   auth := &gitssh.PublicKeys{User: "git", Signer: signer}
+func getPublicKeys(authOptions *AuthOptions) *ssh.PublicKeys {
+	privateKeyFile := fmt.Sprintf("%s/.ssh/%s", os.Getenv("HOME"), authOptions.PrivateKeyFilename)
 
-	*/
-	password := ""
+	password := authOptions.PkPassphrase
 
 	_, err := os.Stat(privateKeyFile)
 
@@ -57,14 +57,14 @@ func CheckIfError(err error) {
 	os.Exit(1)
 }
 
-func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch string, remoteName string) bool {
+func IsCommitPresentOnBranch(repoUrl string, rootCommit *object.Commit, branch string, remoteName string, authOptions *AuthOptions) bool {
 	result := false
 
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:           repoUrl,
 		ReferenceName: plumbing.ReferenceName(branch),
 		RemoteName:    remoteName,
-		Auth:          getPublicKeys(),
+		Auth:          getPublicKeys(authOptions),
 	})
 
 	CheckIfError(err)
@@ -118,12 +118,12 @@ func GetSortedReleases(releases map[string]string) []string {
 	return versions
 }
 
-func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commit {
+func GetRootCommit(repoUrl string, hash string, rootBranch string, authOptions *AuthOptions) *object.Commit {
 	// Clones the given repository, creating the remote, the local branches
 	// and fetching the objects, everything in memory:
 	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:           repoUrl,
-		Auth:          getPublicKeys(),
+		Auth:          getPublicKeys(authOptions),
 		ReferenceName: plumbing.ReferenceName(strings.Join([]string{"refs/heads", rootBranch}, "/")),
 		SingleBranch:  true,
 	})
@@ -157,13 +157,13 @@ func GetRootCommit(repoUrl string, hash string, rootBranch string) *object.Commi
 }
 
 // RemoteRemoteBranches fetches remote branches from the repo origin and filters out the root and release branches
-func FormatRemoteReleaseBranches(repoUrl string, releaseBranchIdentifiers []string, remoteName string) map[string]string {
+func FormatRemoteReleaseBranches(repoUrl string, releaseBranchIdentifiers []string, remoteName string, authOptions *AuthOptions) map[string]string {
 	remote := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: remoteName,
 		URLs: []string{repoUrl},
 	})
 
-	refs, err := remote.List(&git.ListOptions{Auth: getPublicKeys()})
+	refs, err := remote.List(&git.ListOptions{Auth: getPublicKeys(authOptions)})
 
 	if err != nil {
 		log.Fatal(err)

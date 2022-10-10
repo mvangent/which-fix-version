@@ -24,6 +24,7 @@ var (
 )
 
 type Model struct {
+	isInit     bool
 	focusIndex int
 	inputs     []textinput.Model
 	cursorMode textinput.CursorMode
@@ -34,13 +35,12 @@ type Model struct {
 	fixVersion string
 }
 
-var url = "https://github.com/vpofe/which-fix-version"
-
-func InitialModel() Model {
+func InitialModel(gc *git.GitConfig) Model {
 	m := Model{
 		inputs:    make([]textinput.Model, 5),
 		isPending: false,
 		isDone:    false,
+		isInit:    true,
 	}
 
 	var t textinput.Model
@@ -56,22 +56,23 @@ func InitialModel() Model {
 			t.CharLimit = 40
 			t.PromptStyle = focusedStyle
 			t.TextStyle = focusedStyle
+			t.SetValue(gc.CommitHash)
 		case 1:
 			t.Placeholder = "Repository URL"
 			t.CharLimit = 100
-			t.SetValue(url)
+			t.SetValue(gc.URL)
 		case 2:
 			t.Placeholder = "Remote Name"
 			t.CharLimit = 100
-			t.SetValue("origin")
+			t.SetValue(gc.RemoteName)
 		case 3:
 			t.Placeholder = "Development Branch Name"
 			t.CharLimit = 20
-			t.SetValue("main")
+			t.SetValue(gc.DevelopBranchName)
 		case 4:
 			t.Placeholder = "Release Identifiers"
 			t.CharLimit = 120
-			t.SetValue("release- release/ releases/")
+			t.SetValue(strings.Join(gc.ReleaseBranchPrependIdentifiers, " "))
 		}
 
 		m.inputs[i] = t
@@ -93,6 +94,18 @@ type fixVersionMsg string
 type errMsg error
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+
+	skipInteraction := len(m.inputs[0].Value()) > 0 && len(m.inputs[1].Value()) > 0 && len(m.inputs[2].Value()) > 0 && len(m.inputs[3].Value()) > 0 && len(m.inputs[4].Value()) > 0
+
+	if skipInteraction && m.isInit {
+		m.isInit = false
+		m.commitHash = m.inputs[0].Value()
+		m.isPending = true
+		return m, tea.Batch(m.spinner.Tick, m.findFixVersion)
+	}
+
+	m.isInit = false
+
 	switch msg := msg.(type) {
 	case fixVersionMsg:
 		m.isPending = false
@@ -128,6 +141,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
 			if s == "enter" && m.focusIndex == len(m.inputs) {
+				// FIXME: remove commitHash from model?
 				m.commitHash = m.inputs[0].Value()
 				m.isPending = true
 				return m, tea.Batch(m.spinner.Tick, m.findFixVersion)
@@ -221,27 +235,28 @@ func (m Model) View() string {
 	return b.String()
 }
 
+func (m Model) mapTuiInputsToGitConfig() git.GitConfig {
+	return git.GitConfig{
+		CommitHash:                      m.inputs[0].Value(),
+		URL:                             m.inputs[1].Value(),
+		RemoteName:                      m.inputs[2].Value(),
+		DevelopBranchName:               m.inputs[3].Value(),
+		ReleaseBranchPrependIdentifiers: strings.Split(m.inputs[4].Value(), " "),
+	}
+}
+
 func (m Model) findFixVersion() tea.Msg {
-	// FIXME make readable map for inputs
-	repoUrl := m.inputs[1].Value()
+	gitConfig := m.mapTuiInputsToGitConfig()
 
-	releaseIdentifiers := make([]string, 0)
-
-	releaseIdentifiers = append(releaseIdentifiers, strings.Split(m.inputs[4].Value(), " ")...)
-
-	rootCandidates, releases := git.FormatRemoteBranches(repoUrl, m.inputs[3].Value(), releaseIdentifiers, m.inputs[2].Value())
-
-	// fetch commit list from ma(in/ster)
-	root := git.SelectRoot(rootCandidates)
-	// check latest release
+	releases := git.FormatRemoteBranches(&gitConfig)
 
 	sortedReleases := git.GetSortedReleases(releases)
 
-	c := git.GetRootCommit(repoUrl, m.commitHash, root)
+	rootCommit := git.GetRootCommit(&gitConfig)
 
 	var message string
 
-	if c == nil {
+	if rootCommit == nil {
 		message = "No such hash in the root of this repo"
 		return fixVersionMsg(message)
 	} else {
@@ -250,7 +265,7 @@ func (m Model) findFixVersion() tea.Msg {
 		fixedVersions := make([]string, 0)
 
 		for _, version := range sortedReleases {
-			if git.IsCommitPresentOnBranch(repoUrl, c, releases[version], m.inputs[2].Value()) {
+			if git.IsCommitPresentOnBranch(&gitConfig, rootCommit, releases[version]) {
 				fixedVersions = append(fixedVersions, version)
 			} else {
 				// Cancel looking further if previous doesn't have a fixed version any longer

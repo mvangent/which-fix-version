@@ -79,12 +79,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds[i] = m.inputs[i].Focus()
 					m.inputs[i].PromptStyle = focusedStyle
 					m.inputs[i].TextStyle = focusedStyle
-					continue
+					m.inputs[i].CursorStyle = focusedStyle
+				} else {
+					// Remove focused state
+					m.inputs[i].Blur()
+					m.inputs[i].PromptStyle = noStyle
+					m.inputs[i].TextStyle = noStyle
+					m.inputs[i].CursorStyle = noStyle
 				}
-				// Remove focused state
-				m.inputs[i].Blur()
-				m.inputs[i].PromptStyle = noStyle
-				m.inputs[i].TextStyle = noStyle
 			}
 
 			return m, tea.Batch(cmds...)
@@ -114,4 +116,3 @@ func (m *Model) updateInputs(msg tea.Msg) tea.Cmd {
 
 	return tea.Batch(cmds...)
 }
-

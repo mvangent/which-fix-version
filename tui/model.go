@@ -33,33 +33,36 @@ func InitialModel(gc *git.GitConfig) Model {
 	var t textinput.Model
 	for i := range m.inputs {
 		t = textinput.New()
-		t.CursorStyle = cursorStyle
 		t.CharLimit = 32
-
 		switch i {
 		case 0:
+			t.CursorStyle = cursorStyle
 			t.Placeholder = "Commit Hash"
-			t.Focus()
 			t.CharLimit = 40
-			t.PromptStyle = focusedStyle
-			t.TextStyle = focusedStyle
 			t.SetValue(gc.CommitHash)
 		case 1:
 			t.Placeholder = "Repository URL"
 			t.CharLimit = 100
 			t.SetValue(gc.URL)
+			t.Blur()
 		case 2:
 			t.Placeholder = "Remote Name"
 			t.CharLimit = 100
 			t.SetValue(gc.RemoteName)
+			t.Blur()
+
 		case 3:
 			t.Placeholder = "Development Branch Name"
 			t.CharLimit = 20
 			t.SetValue(gc.DevelopBranchName)
+			t.Blur()
+
 		case 4:
 			t.Placeholder = "Release Identifiers"
 			t.CharLimit = 120
 			t.SetValue(strings.Join(gc.ReleaseBranchPrependIdentifiers, " "))
+			t.Blur()
+
 		}
 
 		m.inputs[i] = t
@@ -76,4 +79,3 @@ func InitialModel(gc *git.GitConfig) Model {
 func (m Model) Init() tea.Cmd {
 	return textinput.Blink
 }
-

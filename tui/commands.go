@@ -1,58 +1,11 @@
 package tui
 
 import (
-	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/vpofe/which-fix-version/git"
 )
-
-var (
-	focusedStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	blurredStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	cursorStyle         = focusedStyle.Copy()
-	noStyle             = lipgloss.NewStyle()
-	helpStyle           = blurredStyle.Copy()
-	cursorModeHelpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
-
-	focusedButton = focusedStyle.Copy().Render("[ Submit ]")
-	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render("Submit"))
-)
-
-
-func (m Model) View() string {
-	if m.isDone {
-		return fmt.Sprintf("\n\n Fix version = %s", m.fixVersion)
-	}
-
-	if m.isPending {
-		str := fmt.Sprintf("\n\n  %s Scanning release branches for %s...press q to quit\n\n", m.spinner.View(), m.commitHash)
-		return str
-	}
-
-	var b strings.Builder
-
-	for i := range m.inputs {
-		b.WriteString(m.inputs[i].View())
-		if i < len(m.inputs)-1 {
-			b.WriteRune('\n')
-		}
-	}
-
-	button := &blurredButton
-	if m.focusIndex == len(m.inputs) {
-		button = &focusedButton
-	}
-	fmt.Fprintf(&b, "\n\n%s\n\n", *button)
-
-	b.WriteString(helpStyle.Render("cursor mode is "))
-	b.WriteString(cursorModeHelpStyle.Render(m.cursorMode.String()))
-	b.WriteString(helpStyle.Render(" (ctrl+r to change style)"))
-
-	return b.String()
-}
 
 func (m Model) mapTuiInputsToGitConfig() git.GitConfig {
 	return git.GitConfig{

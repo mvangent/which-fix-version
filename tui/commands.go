@@ -17,7 +17,11 @@ func (m Model) mapTuiInputsToGitConfig() git.GitConfig {
 	}
 }
 
-func (m Model) findFixVersion() tea.Msg {
+func (m Model) findFixVersionLocal() tea.Msg {
+	return "To be implemented soon"
+}
+
+func (m Model) findFixVersionRemote() tea.Msg {
 	gitConfig := m.mapTuiInputsToGitConfig()
 
 	releases := git.FormatRemoteBranches(&gitConfig)

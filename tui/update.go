@@ -5,15 +5,27 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+func (m Model) executeSearchCommand() (tea.Model, tea.Cmd) {
+	m.commitHash = m.inputs[0].Value()
+	m.isPending = true
+	switch m.searchMode {
+	case Remote:
+		return m, tea.Batch(m.spinner.Tick, m.findFixVersionRemote)
+	case Local:
+		return m, tea.Batch(m.spinner.Tick, m.findFixVersionLocal)
+	default:
+		panic("Invalid SearchMode, abort..")
+	}
+
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	skipInteraction := len(m.inputs[0].Value()) > 0 && len(m.inputs[1].Value()) > 0 && len(m.inputs[2].Value()) > 0 && len(m.inputs[3].Value()) > 0 && len(m.inputs[4].Value()) > 0
 
 	if skipInteraction && m.isInit {
 		m.isInit = false
-		m.commitHash = m.inputs[0].Value()
-		m.isPending = true
-		return m, tea.Batch(m.spinner.Tick, m.findFixVersion)
+		return m.executeSearchCommand()
 	}
 
 	m.isInit = false
@@ -53,10 +65,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Did the user press enter while the submit button was focused?
 			// If so, exit.
 			if s == "enter" && m.focusIndex == len(m.inputs) {
-				// FIXME: remove commitHash from model?
-				m.commitHash = m.inputs[0].Value()
-				m.isPending = true
-				return m, tea.Batch(m.spinner.Tick, m.findFixVersion)
+				return m.executeSearchCommand()
 			}
 
 			// Cycle indexes

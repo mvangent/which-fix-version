@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 )
@@ -12,13 +11,18 @@ type Runner interface {
 	Name() string
 }
 
+var (
+	availableCommands = "valid subcommands: \n- local         find fix version in local repository \n- remote        scan a remote repo for the fix version"
+)
+
 func root(args []string) error {
 	if len(args) < 1 {
-		return errors.New("please choose your subcommand, available subcommands: find")
+		return fmt.Errorf("please choose your subcommand, %s", availableCommands)
 	}
 
 	cmds := []Runner{
-		NewFindCommand(),
+		NewFindRemoteCommand(),
+		NewFindLocalCommand(),
 	}
 
 	subcommand := os.Args[1]
@@ -30,7 +34,7 @@ func root(args []string) error {
 		}
 	}
 
-	return fmt.Errorf("unknown subcommand: %s, available subcommands: find", subcommand)
+	return fmt.Errorf("unknown subcommand: %s, %s", subcommand, availableCommands)
 }
 
 func main() {

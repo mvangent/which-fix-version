@@ -21,7 +21,14 @@ func (m Model) executeSearchCommand() (tea.Model, tea.Cmd) {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	skipInteraction := len(m.inputs[0].Value()) > 0 && len(m.inputs[1].Value()) > 0 && len(m.inputs[2].Value()) > 0 && len(m.inputs[3].Value()) > 0 && len(m.inputs[4].Value()) > 0
+	skipInteraction := true
+
+	for i := 0; i < len(m.inputs); i++ {
+		if len(m.inputs[i].Value()) == 0 {
+			skipInteraction = false
+			break
+		}
+	}
 
 	if skipInteraction && m.isInit {
 		m.isInit = false

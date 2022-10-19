@@ -18,7 +18,7 @@ func (m Model) mapTuiInputsToGitConfig() git.GitConfig {
 }
 
 func (m Model) findFixVersionLocal() tea.Msg {
-	return "To be implemented soon"
+	return fixVersionMsg("To be implemented soon")
 }
 
 func (m Model) findFixVersionRemote() tea.Msg {

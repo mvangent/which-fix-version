@@ -92,7 +92,7 @@ func (mb modelBuilder) AddInputs(searchMode SearchMode, gc *git.GitConfig) Model
 	case Local:
 		m.searchMode = Local
 
-		m.inputs = make([]textinput.Model, 3)
+		m.inputs = make([]textinput.Model, 4)
 
 		var t textinput.Model
 		for i := range m.inputs {
@@ -114,7 +114,11 @@ func (mb modelBuilder) AddInputs(searchMode SearchMode, gc *git.GitConfig) Model
 				t.CharLimit = 120
 				t.SetValue(strings.Join(gc.ReleaseBranchPrependIdentifiers, " "))
 				t.Blur()
-
+			case 3:
+				t.Placeholder = "Path"
+				t.CharLimit = 120
+				t.SetValue(gc.Path)
+				t.Blur()
 			}
 
 			m.inputs[i] = t

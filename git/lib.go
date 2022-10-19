@@ -21,6 +21,7 @@ type GitConfig struct {
 	RemoteName                      string
 	DevelopBranchName               string
 	ReleaseBranchPrependIdentifiers []string
+	Path                            string
 }
 
 func CheckIfError(err error) {

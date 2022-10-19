@@ -8,16 +8,29 @@ import (
 )
 
 func (m Model) mapTuiInputsToGitConfig() git.GitConfig {
-	return git.GitConfig{
+	gc := git.GitConfig{
 		CommitHash:                      m.inputs[0].Value(),
-		URL:                             m.inputs[1].Value(),
-		RemoteName:                      m.inputs[2].Value(),
-		DevelopBranchName:               m.inputs[3].Value(),
-		ReleaseBranchPrependIdentifiers: strings.Split(m.inputs[4].Value(), " "),
+		DevelopBranchName:               m.inputs[1].Value(),
+		ReleaseBranchPrependIdentifiers: strings.Split(m.inputs[2].Value(), " "),
+	}
+
+	switch m.searchMode {
+	case Local:
+		gc.Path = m.inputs[3].Value()
+		return gc
+
+	case Remote:
+		gc.URL = m.inputs[3].Value()
+		gc.RemoteName = m.inputs[4].Value()
+		return gc
+
+	default:
+		panic("Can't map inputs to GitConfig. SearchMode is not valid")
 	}
 }
 
 func (m Model) findFixVersionLocal() tea.Msg {
+
 	return fixVersionMsg("To be implemented soon")
 }
 

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -30,8 +31,12 @@ func (m Model) mapTuiInputsToGitConfig() git.GitConfig {
 }
 
 func (m Model) findFixVersionLocal() tea.Msg {
-
-	return fixVersionMsg("To be implemented soon")
+          
+	gitConfig := m.mapTuiInputsToGitConfig()
+     
+    ls := git.FormatLocalBranches(&gitConfig)
+	
+    return fixVersionMsg("test")
 }
 
 func (m Model) findFixVersionRemote() tea.Msg {

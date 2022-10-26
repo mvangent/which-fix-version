@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -31,12 +30,14 @@ func (m Model) mapTuiInputsToGitConfig() git.GitConfig {
 }
 
 func (m Model) findFixVersionLocal() tea.Msg {
-          
+
 	gitConfig := m.mapTuiInputsToGitConfig()
-     
-    ls := git.FormatLocalBranches(&gitConfig)
-	
-    return fixVersionMsg("test")
+
+	releases := git.FormatLocalBranches(&gitConfig)
+
+	sortedReleases := git.GetSortedReleases(releases)
+
+	return fixVersionMsg(strings.Join(sortedReleases, " "))
 }
 
 func (m Model) findFixVersionRemote() tea.Msg {

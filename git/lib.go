@@ -167,3 +167,38 @@ func FormatRemoteBranches(gitConfig *GitConfig) map[string]string {
 
 	return releases
 }
+
+func FormatLocalBranches(gitConfig *GitConfig) map[string]string {
+	r, err := git.PlainOpen(gitConfig.Path)
+
+	CheckIfError(err)
+
+	refIter, err := r.Branches()
+
+	CheckIfError(err)
+
+	releases := make(map[string]string)
+
+	err = refIter.ForEach(func(r *plumbing.Reference) error {
+		s := r.String()
+		// FIXME: find a better helper
+		if strings.Contains(s, "refs/heads/") {
+			branchName := strings.SplitAfter(s, " ")[1]
+
+			var branchVersion string
+
+			for _, releaseIdentifier := range gitConfig.ReleaseBranchPrependIdentifiers {
+				if strings.Contains(branchName, releaseIdentifier) {
+					branchVersion = strings.SplitAfter(branchName, releaseIdentifier)[1]
+					releases[branchVersion] = branchName
+				}
+			}
+		}
+
+		return nil
+	})
+
+	CheckIfError(err)
+
+	return releases
+}

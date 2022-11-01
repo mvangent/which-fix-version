@@ -11,7 +11,10 @@ run:
 	go run ./cmd/...
 
 update:
-	go list -m -u all \
-	| awk -F" " '{ if ($$3 != "") print $$1 " " $$3; }' \
-	| xargs -l bash -c 'VERSION=$$(grep -Po "(?<=\[).+(?=\])" <<<$$1); go get $$0@$$VERSION'
+	go list -m -u all | while read line; do \
+		{ test -n "$(echo $line | cut -d' ' -f3)" && echo $line; }; done \
+	| sed 1d | while read line; do \
+		PKG=$(echo "$line"|cut -d' ' -f1); \
+		VERSION=$(echo "$line"|cut -d' ' -f3 ); \
+		echo go get $PKG@$(echo $VERSION|sed -e 's/\[//' -e 's/\]//'); done
 	go mod tidy

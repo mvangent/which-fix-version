@@ -16,5 +16,5 @@ update:
 	| sed 1d | while read line; do \
 		PKG=$(echo "$line"|cut -d' ' -f1); \
 		VERSION=$(echo "$line"|cut -d' ' -f3 ); \
-		echo go get $PKG@$(echo $VERSION|sed -e 's/\[//' -e 's/\]//'); done
+		go get $PKG@$(echo $VERSION|sed -e 's/\[//' -e 's/\]//'); done
 	go mod tidy

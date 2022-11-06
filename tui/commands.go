@@ -37,7 +37,36 @@ func (m Model) findFixVersionLocal() tea.Msg {
 
 	sortedReleases := git.GetSortedReleases(releases)
 
-	return fixVersionMsg(strings.Join(sortedReleases, " "))
+	rootCommit := git.GetRootCommit(&gitConfig)
+
+	var message string
+
+	if rootCommit == nil {
+		message = "No such hash in the root of this repo"
+		return fixVersionMsg(message)
+	} else {
+		message = "No fixed version found"
+
+		fixedVersions := make([]string, 0)
+
+		for _, version := range sortedReleases {
+			if git.IsCommitPresentOnBranch(&gitConfig, rootCommit, releases[version]) {
+				fixedVersions = append(fixedVersions, version)
+			} else {
+				// Cancel looking further if previous doesn't have a fixed version any longer
+				if len(fixedVersions) > 0 {
+					break
+				}
+			}
+		}
+
+		if len(fixedVersions) > 0 {
+			return fixVersionMsg(fixedVersions[len(fixedVersions)-1])
+		} else {
+			return fixVersionMsg("No fixed version found")
+		}
+	}
+
 }
 
 func (m Model) findFixVersionRemote() tea.Msg {

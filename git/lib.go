@@ -36,18 +36,31 @@ func CheckIfError(err error) {
 func IsCommitPresentOnBranch(config *GitConfig, rootCommit *object.Commit, branch string) bool {
 	result := false
 
-	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:           config.URL,
-		RemoteName:    config.RemoteName,
-		ReferenceName: plumbing.ReferenceName(branch),
-		SingleBranch:  true,
-	})
+	var r *git.Repository
+	var err error
+	var ref *plumbing.Reference
 
-	CheckIfError(err)
+	if config.Path != "" {
+		r, err = git.PlainOpen(config.Path)
 
-	// Gets the HEAD history from HEAD, just like this command:
-	// ... retrieves the branch pointed by HEAD
-	ref, err := r.Head()
+		CheckIfError(err)
+
+		ref, err = r.Reference(plumbing.ReferenceName(branch), true)
+	} else {
+		r, err = git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+			URL:           config.URL,
+			RemoteName:    config.RemoteName,
+			ReferenceName: plumbing.ReferenceName(branch),
+			SingleBranch:  true,
+		})
+
+		CheckIfError(err)
+
+		// Gets the HEAD history from HEAD, just like this command:
+		// ... retrieves the branch pointed by HEAD
+		ref, err = r.Head()
+	}
+
 	CheckIfError(err)
 
 	// ... retrieves the commit history
@@ -94,15 +107,23 @@ func GetSortedReleases(releases map[string]string) []string {
 }
 
 func GetRootCommit(gitConfig *GitConfig) *object.Commit {
-	// Clones the given repository, creating the remote, the local branches
-	// and fetching the objects, everything in memory:
-	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-		URL:        gitConfig.URL,
-		RemoteName: gitConfig.RemoteName,
-		// FIXME: figure out why plumbing is not working
-		ReferenceName: plumbing.ReferenceName(strings.Join([]string{"refs/heads", gitConfig.DevelopBranchName}, "/")),
-		SingleBranch:  true,
-	})
+	var r *git.Repository
+	var err error
+
+	if gitConfig.Path != "" {
+		r, err = git.PlainOpen(gitConfig.Path)
+	} else {
+
+		// Clones the given repository, creating the remote, the local branches
+		// and fetching the objects, everything in memory:
+		r, err = git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+			URL:        gitConfig.URL,
+			RemoteName: gitConfig.RemoteName,
+			// FIXME: figure out why plumbing is not working
+			ReferenceName: plumbing.ReferenceName(strings.Join([]string{"refs/heads", gitConfig.DevelopBranchName}, "/")),
+			SingleBranch:  true,
+		})
+	}
 
 	CheckIfError(err)
 

@@ -23,6 +23,7 @@ func (m Model) View() string {
 	// data
 	commitHash := m.commitHash
 	fixVersion := m.fixVersion
+	currentVersion := m.currentVersion
 
 	/* End of State */
 
@@ -36,7 +37,7 @@ func (m Model) View() string {
 
 	// Search in progress
 	if isPending {
-		b.WriteString(fmt.Sprintf("\n\n  %s Scanning release branches for %s...press q to quit\n\n", spinner.View(), commitHash))
+		b.WriteString(fmt.Sprintf("\n\n  %s Scanning release branch: %s, for %s...press q to quit\n\n", spinner.View(), currentVersion, commitHash))
 	}
 
 	// Interactive Inputs

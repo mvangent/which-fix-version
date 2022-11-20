@@ -21,7 +21,7 @@ func NewFindRemoteCommand() *FindRemoteCommand {
 	fc.fs.StringVar(&fc.url, "url", "", "git repository url")
 	fc.fs.StringVar(&fc.remoteName, "remoteName", "origin", "remote name to fetch branches from")
 	fc.fs.StringVar(&fc.developmentBranchName, "developmentBranchName", "main", "name of the central development branch")
-	fc.fs.StringVar(&fc.releaseBranchPrependIdentifiers, "releaseBranchPrependIdentifiers", "release- releases/ release/", "all string characters before the release version")
+	fc.fs.StringVar(&fc.releaseBranchPrependIdentifiers, "releaseBranchPrependIdentifiers", "", "all string characters before the release version")
 
 	return fc
 }

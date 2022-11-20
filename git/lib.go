@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -189,37 +191,62 @@ func FormatRemoteBranches(gitConfig *GitConfig) map[string]string {
 	return releases
 }
 
-func FormatLocalBranches(gitConfig *GitConfig) map[string]string {
-	r, err := git.PlainOpen(gitConfig.Path)
+func FormatLocalBranches(gitConfig *GitConfig) float64 {
+	prg := "git"
+
+	arg1 := "branch"
+	arg2 := "--remotes"
+	arg3 := "--contains"
+	arg4 := gitConfig.CommitHash
+
+	cmd := exec.Command(prg, arg1, arg2, arg3, arg4)
+	cmd.Dir = gitConfig.Path
+	stdout, err := cmd.Output()
 
 	CheckIfError(err)
 
-	refIter, err := r.Branches()
+	results := string(stdout[:])
 
-	CheckIfError(err)
+	branchList := strings.Split(results, " ")
 
 	releases := make(map[string]string)
 
-	err = refIter.ForEach(func(r *plumbing.Reference) error {
-		s := r.String()
-		// FIXME: find a better helper
-		if strings.Contains(s, "refs/heads/") {
-			branchName := strings.SplitAfter(s, " ")[1]
+	for _, branchName := range branchList {
+		var branchVersion string
 
-			var branchVersion string
-
-			for _, releaseIdentifier := range gitConfig.ReleaseBranchPrependIdentifiers {
-				if strings.Contains(branchName, releaseIdentifier) {
-					branchVersion = strings.SplitAfter(branchName, releaseIdentifier)[1]
-					releases[branchVersion] = branchName
-				}
+		for _, releaseIdentifier := range gitConfig.ReleaseBranchPrependIdentifiers {
+			if strings.Contains(branchName, releaseIdentifier) {
+				branchVersion = strings.SplitAfter(branchName, releaseIdentifier)[1]
+				releases[branchVersion] = branchName
 			}
 		}
+	}
 
-		return nil
-	})
+	releaseVersions := make([]float64, len(releases))
 
-	CheckIfError(err)
+	for k := range releases {
+		// FIXME: handle release versions with non number characters
+		stripped := strings.ReplaceAll(k, "\n", "")
 
-	return releases
+		i, err := strconv.ParseFloat(stripped, 64)
+
+		CheckIfError(err)
+
+		releaseVersions = append(releaseVersions, i)
+	}
+
+	firstVersion := 0.0
+
+	for _, v := range releaseVersions {
+		if firstVersion == 0.0 {
+			firstVersion = v
+		}
+
+		if v > 0 && v < firstVersion {
+			firstVersion = v
+		}
+	}
+
+	// FIXME: TRIM back to original length
+	return firstVersion
 }

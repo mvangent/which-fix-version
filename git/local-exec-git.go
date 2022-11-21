@@ -35,7 +35,7 @@ func FormatLocalBranches(gitConfig *GitConfig) float64 {
 	for _, branchName := range branchList {
 		var branchVersion string
 
-		for _, releaseIdentifier := range gitConfig.ReleaseBranchPrependIdentifiers {
+		for _, releaseIdentifier := range gitConfig.ReleaseBranchFormats {
 			if strings.Contains(branchName, releaseIdentifier) {
 				branchVersion = strings.SplitAfter(branchName, releaseIdentifier)[1]
 				releases[branchVersion] = branchName

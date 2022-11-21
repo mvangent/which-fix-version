@@ -10,9 +10,9 @@ import (
 
 func (m Model) mapTuiInputsToGitConfig() git.GitConfig {
 	gc := git.GitConfig{
-		CommitHash:                      m.inputs[0].Value(),
-		DevelopBranchName:               m.inputs[1].Value(),
-		ReleaseBranchPrependIdentifiers: strings.Split(m.inputs[2].Value(), " "),
+		CommitHash:            m.inputs[0].Value(),
+		DevelopmentBranchName: m.inputs[1].Value(),
+		ReleaseBranchFormats:  strings.Split(m.inputs[2].Value(), " "),
 	}
 
 	switch m.searchMode {

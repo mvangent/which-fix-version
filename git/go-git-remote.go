@@ -16,12 +16,12 @@ import (
 )
 
 type GitConfig struct {
-	CommitHash                      string
-	URL                             string
-	RemoteName                      string
-	DevelopBranchName               string
-	ReleaseBranchPrependIdentifiers []string
-	Path                            string
+	CommitHash            string
+	URL                   string
+	RemoteName            string
+	DevelopmentBranchName string
+	ReleaseBranchFormats  []string
+	Path                  string
 }
 
 func CheckIfError(err error) {
@@ -120,7 +120,7 @@ func GetRootCommit(gitConfig *GitConfig) *object.Commit {
 			URL:        gitConfig.URL,
 			RemoteName: gitConfig.RemoteName,
 			// FIXME: figure out why plumbing is not working
-			ReferenceName: plumbing.ReferenceName(strings.Join([]string{"refs/heads", gitConfig.DevelopBranchName}, "/")),
+			ReferenceName: plumbing.ReferenceName(strings.Join([]string{"refs/heads", gitConfig.DevelopmentBranchName}, "/")),
 			SingleBranch:  true,
 		})
 	}
@@ -177,7 +177,7 @@ func FormatRemoteBranches(gitConfig *GitConfig) map[string]string {
 
 			var branchVersion string
 
-			for _, releaseIdentifier := range gitConfig.ReleaseBranchPrependIdentifiers {
+			for _, releaseIdentifier := range gitConfig.ReleaseBranchFormats {
 				if strings.Contains(branchName, releaseIdentifier) {
 					branchVersion = strings.SplitAfter(branchName, releaseIdentifier)[1]
 					releases[branchVersion] = branchName

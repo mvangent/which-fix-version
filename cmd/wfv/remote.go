@@ -21,7 +21,7 @@ func NewFindRemoteCommand() *FindRemoteCommand {
 	fc.fs.StringVar(&fc.url, "url", "", "git repository url")
 	fc.fs.StringVar(&fc.remoteName, "remoteName", "origin", "remote name to fetch branches from")
 	fc.fs.StringVar(&fc.developmentBranchName, "developmentBranchName", "main", "name of the central development branch")
-	fc.fs.StringVar(&fc.releaseBranchPrependIdentifiers, "releaseBranchPrependIdentifiers", "", "all string characters before the release version")
+	fc.fs.StringVar(&fc.releaseBranchFormats, "releaseBranchFormats", "", "all string characters in the branchname before the release version. For example: /starproject/ios/releases/. Takes multiple formats seperated by a space character")
 
 	return fc
 }
@@ -29,11 +29,11 @@ func NewFindRemoteCommand() *FindRemoteCommand {
 type FindRemoteCommand struct {
 	fs *flag.FlagSet
 
-	url                             string
-	remoteName                      string
-	developmentBranchName           string
-	releaseBranchPrependIdentifiers string
-	commitHash                      string
+	url                   string
+	remoteName            string
+	developmentBranchName string
+	releaseBranchFormats  string
+	commitHash            string
 }
 
 func (g *FindRemoteCommand) Name() string {
@@ -46,11 +46,11 @@ func (g *FindRemoteCommand) Init(args []string) error {
 
 func (g *FindRemoteCommand) Run() error {
 	app := app.NewApp(&git.GitConfig{
-		CommitHash:                      g.commitHash,
-		URL:                             g.url,
-		RemoteName:                      g.remoteName,
-		DevelopBranchName:               g.developmentBranchName,
-		ReleaseBranchPrependIdentifiers: strings.Split(g.releaseBranchPrependIdentifiers, " "),
+		CommitHash:            g.commitHash,
+		URL:                   g.url,
+		RemoteName:            g.remoteName,
+		DevelopmentBranchName: g.developmentBranchName,
+		ReleaseBranchFormats:  strings.Split(g.releaseBranchFormats, " "),
 	}, tui.Remote)
 
 	if err := tea.NewProgram(app.Model).Start(); err != nil {

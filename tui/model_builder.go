@@ -14,7 +14,7 @@ type ModelBuilder interface {
 
 	AddInputs(searchMode SearchMode, gc *git.GitConfig) ModelBuilder
 	AddSpinner() ModelBuilder
-	InitUI() ModelBuilder
+	InitUI(gc *git.GitConfig) ModelBuilder
 }
 
 type modelBuilder struct{ m Model }
@@ -29,10 +29,11 @@ func (mb modelBuilder) Build() Model {
 	return mb.m
 }
 
-func (mb modelBuilder) InitUI() ModelBuilder {
+func (mb modelBuilder) InitUI(gc *git.GitConfig) ModelBuilder {
 	mb.m.isPending = false
 	mb.m.isDone = false
 	mb.m.isInit = true
+	mb.m.developmentBranch = gc.DevelopmentBranchName
 
 	return mb
 }
@@ -44,7 +45,6 @@ func (mb modelBuilder) AddSpinner() ModelBuilder {
 	mb.m.spinner = s
 
 	return mb
-
 }
 
 func (mb modelBuilder) AddInputs(searchMode SearchMode, gc *git.GitConfig) ModelBuilder {
@@ -68,12 +68,12 @@ func (mb modelBuilder) AddInputs(searchMode SearchMode, gc *git.GitConfig) Model
 			case 1:
 				t.Placeholder = "Development Branch Name"
 				t.CharLimit = 20
-				t.SetValue(gc.DevelopBranchName)
+				t.SetValue(gc.DevelopmentBranchName)
 				t.Blur()
 			case 2:
 				t.Placeholder = "Release Identifiers"
 				t.CharLimit = 120
-				t.SetValue(strings.Join(gc.ReleaseBranchPrependIdentifiers, " "))
+				t.SetValue(strings.Join(gc.ReleaseBranchFormats, " "))
 				t.Blur()
 			case 3:
 				t.Placeholder = "Repository URL"
@@ -107,12 +107,12 @@ func (mb modelBuilder) AddInputs(searchMode SearchMode, gc *git.GitConfig) Model
 			case 1:
 				t.Placeholder = "Development Branch Name"
 				t.CharLimit = 20
-				t.SetValue(gc.DevelopBranchName)
+				t.SetValue(gc.DevelopmentBranchName)
 				t.Blur()
 			case 2:
 				t.Placeholder = "Release Identifiers"
 				t.CharLimit = 120
-				t.SetValue(strings.Join(gc.ReleaseBranchPrependIdentifiers, " "))
+				t.SetValue(strings.Join(gc.ReleaseBranchFormats, " "))
 				t.Blur()
 			case 3:
 				t.Placeholder = "Path"

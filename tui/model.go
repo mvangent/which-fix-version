@@ -25,24 +25,25 @@ func (searchMode SearchMode) String() string {
 }
 
 type Model struct {
-	isInit         bool
-	focusIndex     int
-	inputs         []textinput.Model
-	cursorMode     textinput.CursorMode
-	isPending      bool
-	isDone         bool
-	commitHash     string
-	spinner        spinner.Model
-	fixVersion     string
-	searchMode     SearchMode
-	currentVersion string
+	isInit            bool
+	focusIndex        int
+	inputs            []textinput.Model
+	cursorMode        textinput.CursorMode
+	isPending         bool
+	isDone            bool
+	commitHash        string
+	spinner           spinner.Model
+	fixVersion        string
+	searchMode        SearchMode
+	currentVersion    string
+	developmentBranch string
 }
 
 func InitialModel(gc *git.GitConfig, searchMode SearchMode) Model {
 
 	mb := NewBuilder()
 
-	m := mb.InitUI().AddInputs(searchMode, gc).AddSpinner().Build()
+	m := mb.InitUI(gc).AddInputs(searchMode, gc).AddSpinner().Build()
 
 	return m
 }

@@ -192,6 +192,12 @@ func FormatRemoteBranches(gitConfig *GitConfig) map[string]string {
 }
 
 func FormatLocalBranches(gitConfig *GitConfig) float64 {
+	fetchCommand := exec.Command("git", "fetch")
+	fetchCommand.Dir = gitConfig.Path
+	err := fetchCommand.Run()
+
+	CheckIfError(err)
+
 	prg := "git"
 
 	arg1 := "branch"
@@ -199,9 +205,9 @@ func FormatLocalBranches(gitConfig *GitConfig) float64 {
 	arg3 := "--contains"
 	arg4 := gitConfig.CommitHash
 
-	cmd := exec.Command(prg, arg1, arg2, arg3, arg4)
-	cmd.Dir = gitConfig.Path
-	stdout, err := cmd.Output()
+	searchCmd := exec.Command(prg, arg1, arg2, arg3, arg4)
+	searchCmd.Dir = gitConfig.Path
+	stdout, err := searchCmd.Output()
 
 	CheckIfError(err)
 

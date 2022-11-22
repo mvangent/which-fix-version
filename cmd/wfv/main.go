@@ -12,7 +12,7 @@ type Runner interface {
 }
 
 var (
-	availableCommands = "valid subcommands: \n- local         find fix version in local repository \n- remote        scan a remote repo for the fix version"
+	availableCommands = "valid options: \n- local         find fix version in local repository \n- remote        scan a remote repo for the fix version"
 )
 
 func root(args []string) error {

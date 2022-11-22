@@ -8,7 +8,7 @@ A TUI that gives immediate insight in what release version your (merge) commit f
 Run `./wfv` to verify the subcommands options are showing:
 
 ```
-please choose your subcommand, valid subcommands:
+please choose your subcommand, valid options:
 - local         find fix version in local repository
 - remote        scan a remote repo for the fix version
 ```

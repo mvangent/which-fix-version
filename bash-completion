@@ -1,0 +1,67 @@
+# watchmon completion                                      -*- shell-script -*-
+
+__gitbranches()
+{
+    if git rev-parse --is-inside-work-tree; then
+        git branch --sort=refname --format '%(refname)' | xargs -n1 basename
+    else
+        echo release master main development
+    fi
+}
+
+_completions()
+{
+    local cur prev OPTS
+    _init_completion || return
+
+    subcmd="${COMP_WORDS[1]}"
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+
+    case $prev in
+        '--commitHash')
+            COMPREPLY=( $(compgen -W  "$(echo '<gitref>')" -- $cur) )
+            return 0
+            ;;
+        '--releaseBranchFormats')
+            COMPREPLY=( $(compgen -W "$(__gitbranches)" -- $cur) )
+            return 0
+            ;;
+        '--developmentBranchName')
+            COMPREPLY=( $(compgen -W "$(__gitbranches)" -- $cur) )
+            return 0
+            ;;
+    esac
+
+    case $subcmd in
+        'local')
+            COMPREPLY=( $(compgen -W "--releaseBranchFormats --developmentBranchName --path --commitHash" -- $cur) )
+            return 0
+            ;;
+        'remote')
+            COMPREPLY=( $(compgen -W "--releaseBranchFormats --developmentBranchName --remoteName --url --commitHash" -- $cur) )
+            return 0
+            ;;
+        'completions')
+            return 0
+            ;;
+    esac
+
+    case $cur in
+        *)
+            OPTS="remote local"
+            COMPREPLY=( $(compgen -W "${OPTS[*]}" -- $cur) )
+            return 0
+            ;;
+    esac
+
+    return 0
+}
+
+__term_restore() {
+    stty sane
+}
+
+alias wfv='trap __term_restore ERR; wfv'
+complete -o bashdefault -F _completions wfv

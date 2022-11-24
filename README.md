@@ -18,7 +18,7 @@ please choose your subcommand, valid options:
 
 Load interactive Completions (<TAB><TAB>)
 ```
-. $(wfv completion)
+. <(wfv completion)
 ```
 
 ### When git repository is locally installed

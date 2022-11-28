@@ -34,6 +34,7 @@ func (mb modelBuilder) InitUI(gc *git.GitConfig) ModelBuilder {
 	mb.m.isDone = false
 	mb.m.isInit = true
 	mb.m.developmentBranch = gc.DevelopmentBranchName
+	mb.m.skipFetch = gc.SkipFetch
 
 	return mb
 }
@@ -125,7 +126,6 @@ func (mb modelBuilder) AddInputs(searchMode SearchMode, gc *git.GitConfig) Model
 		}
 	default:
 		panic("Invalid searchMode")
-
 	}
 
 	mb.m = m

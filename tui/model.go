@@ -37,6 +37,7 @@ type Model struct {
 	searchMode        SearchMode
 	currentVersion    string
 	developmentBranch string
+	skipFetch         bool
 }
 
 func InitialModel(gc *git.GitConfig, searchMode SearchMode) Model {

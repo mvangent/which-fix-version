@@ -7,11 +7,16 @@ import (
 )
 
 func FormatLocalBranches(gitConfig *GitConfig) float64 {
-	fetchCommand := exec.Command("git", "fetch")
-	fetchCommand.Dir = gitConfig.Path
-	err := fetchCommand.Run()
+	if !gitConfig.SkipFetch {
 
-	CheckIfError(err)
+		fetchCommand := exec.Command("git", "fetch")
+		fetchCommand.Dir = gitConfig.Path
+		err := fetchCommand.Run()
+
+		if err != nil {
+			panic("`git fetch` did not succeed: consider running the application without network calls by adding `--skipFetch` to the `wfv local` command")
+		}
+	}
 
 	prg := "git"
 

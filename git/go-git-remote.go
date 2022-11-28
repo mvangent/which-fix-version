@@ -15,6 +15,7 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 )
 
+// FIXME: split local config with remote one
 type GitConfig struct {
 	CommitHash            string
 	URL                   string
@@ -22,6 +23,7 @@ type GitConfig struct {
 	DevelopmentBranchName string
 	ReleaseBranchFormats  []string
 	Path                  string
+	SkipFetch             bool
 }
 
 func CheckIfError(err error) {

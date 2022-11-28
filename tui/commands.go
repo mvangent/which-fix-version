@@ -18,6 +18,9 @@ func (m Model) mapTuiInputsToGitConfig() git.GitConfig {
 	switch m.searchMode {
 	case Local:
 		gc.Path = m.inputs[3].Value()
+
+		gc.SkipFetch = m.skipFetch
+
 		return gc
 
 	case Remote:

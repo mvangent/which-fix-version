@@ -11,9 +11,15 @@ Run `./wfv` to verify the subcommands options are showing:
 please choose your subcommand, valid options:
 - local         find fix version in local repository
 - remote        scan a remote repo for the fix version
+- completion    expand the shell with wrapper and completions
 ```
 
 ## Example Usage
+
+Load interactive Completions (<TAB><TAB>)
+```
+. <(wfv completion)
+```
 
 ### When git repository is locally installed
 

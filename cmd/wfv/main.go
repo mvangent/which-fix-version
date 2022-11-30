@@ -12,7 +12,11 @@ type Runner interface {
 }
 
 var (
-	availableCommands = "valid options: \n- local         find fix version in local repository \n- remote        scan a remote repo for the fix version"
+	availableCommands = `valid options:
+- local         find fix version in local repository
+- remote        scan a remote repo for the fix version
+- completion    expand the shell with wrapper and completions`
+	versionTag string
 )
 
 func root(args []string) error {
@@ -23,6 +27,7 @@ func root(args []string) error {
 	cmds := []Runner{
 		NewFindRemoteCommand(),
 		NewFindLocalCommand(),
+		NewCompletionCommand(),
 	}
 
 	subcommand := os.Args[1]
